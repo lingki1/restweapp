@@ -64,16 +64,17 @@ module.exports = Behavior({
 		},
 
 		_loadUser: async function (e) {
-
-			let opts = {
-				title: 'bar'
+			let user = cacheHelper.get(PassortBiz.CACHE_USER);
+			if (user && user.userId) {
+				this.setData({
+					user
+				});
+			} else {
+				// 如果缓存没有，可以考虑是否需要调用云函数获取，或者清除本地user状态
+				this.setData({
+					user: null
+				});
 			}
-			let user = await cloudHelper.callCloudData('passport/my_detail', {}, opts);
-			if (!user) return;
-
-			this.setData({
-				user
-			})
 		},
 
 		/**
@@ -128,6 +129,63 @@ module.exports = Behavior({
 				},
 				fail: function (res) {}
 			})
+		},
+
+		bindWxLogin: async function () {
+			let that = this;
+			wx.getUserProfile({
+				desc: '用于完善会员资料', // 声明获取用户个人信息后的用途，后续会展示在弹窗中，请谨慎填写 <mcreference link="https://blog.csdn.net/qq_32340877/article/details/119861959" index="1">1</mcreference> <mcreference link="https://developers.weixin.qq.com/miniprogram/dev/api/open-api/user-info/wx.getUserProfile.html" index="2">2</mcreference>
+				success: async (res) => {
+					let userInfo = res.userInfo;
+					wx.login({
+						success: async resLogin => {
+							if (resLogin.code) {
+								let params = {
+									code: resLogin.code,
+									nickName: userInfo.nickName,
+									avatarUrl: userInfo.avatarUrl
+								};
+								try {
+									await cloudHelper.callCloudSumbit('passport/wx_login', params).then(resCloud => {
+										if (resCloud && resCloud.data) {
+											// 登录成功
+											cacheHelper.set(PassortBiz.CACHE_USER, resCloud.data);
+											that.setData({
+												user: resCloud.data
+											});
+											pageHelper.showSuccToast('登录成功');
+										} else {
+											pageHelper.showModal('登录失败，请重试');
+										}
+									});
+								} catch (err) {
+									console.error(err);
+									pageHelper.showModal('登录失败，请重试');
+								}
+							} else {
+								pageHelper.showModal('获取登录凭证失败，请重试');
+							}
+						}
+					});
+				},
+				fail: (err) => {
+					console.log('用户拒绝授权', err);
+					// 可以根据业务需求提示用户，例如：
+					// pageHelper.showModal('您已拒绝授权，部分功能可能无法使用');
+				}
+			});
+		},
+
+		bindLogoutTap: function () {
+			PassortBiz.logout(); // 清除登录缓存
+			// 强制更新页面数据，确保UI响应
+			this.setData({
+				user: null, 
+				myTodayList: [] // 清空今日订座列表，或设置为初始状态
+			});
+			pageHelper.showSuccToast('已退出登录');
+			// 可能需要重新加载或导航到特定页面，根据业务需求决定
+			// wx.reLaunch({ url: '/pages/my/index' }); 
 		}
 	}
 })

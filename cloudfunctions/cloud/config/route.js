@@ -10,6 +10,7 @@ module.exports = {
 	'passport/phone': 'passport_controller@getPhone',
 	'passport/my_detail': 'passport_controller@getMyDetail',
 	'passport/edit_base': 'passport_controller@editBase',
+	'passport/wx_login': 'passport_controller@wxLogin',
 
 	'news/list': 'news_controller@getNewsList',
 	'news/home_list': 'news_controller@getHomeNewsList',

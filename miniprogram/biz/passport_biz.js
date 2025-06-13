@@ -9,8 +9,11 @@ const AdminBiz = require('./admin_biz.js');
 const setting = require('../setting/setting.js');
 const dataHelper = require('../helper/data_helper.js');
 const cloudHelper = require('../helper/cloud_helper.js');
+const cacheHelper = require('../helper/cache_helper.js');
 
 class PassportBiz extends BaseBiz {
+
+	static CACHE_USER = 'CACHE_USER'; // 用户信息缓存KEY
 
 	/**
 	 * 页面初始化 分包下使用
@@ -89,6 +92,10 @@ class PassportBiz extends BaseBiz {
 			console.log(e);
 		}
 
+	}
+
+	static logout() {
+		cacheHelper.remove(this.CACHE_USER);
 	}
 
 }

@@ -20,6 +20,7 @@ UserModel.DB_STRUCTURE = {
 
 	USER_NAME: 'string|false|comment=用户姓名',
 	USER_MOBILE: 'string|false|comment=联系电话',
+	USER_AVATAR_URL: 'string|false|comment=用户头像URL',
 
 	USER_WORK: 'string|false|comment=所在单位',
 	USER_CITY: 'string|false|comment=所在城市',

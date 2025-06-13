@@ -1,5 +1,9 @@
 module.exports = {
 
+	//### 微信小程序相关
+	WECHAT_APPID: 'wxf76ea9bf5982dd05',
+	WECHAT_APPSECRET: '4af9e95c1d4394f0b48d33b9e90d22a8',
+
 	//### 环境相关 
 	CLOUD_ID: 'cloud1-3ggfodggf223466a', //你的云环境id 
 

@@ -6,12 +6,12 @@
 			<image wx:if="{{upImg}}" mode="aspectFill" lazy-load class="upImg loading" src="{{upImg}}" />
 			<view class="user-bar">
 				<view class="avatar">
-					<image mode="aspectFit" src="../../skin/images/tabbar/my_cur.png" />
+					<image mode="aspectFit" src="{{user && user.avatar ? user.avatar : '../../skin/images/tabbar/my_cur.png'}}" />
 				</view>
-				<view class="detail" bindtap="url" data-url="../edit/my_edit">
-					<view class="name text-cut">{{user?user.USER_NAME:'欢迎回来~~~'}}</view>
-					<view class="desc">
-						<view class="text-cut">{{user?'修改个人资料':'马上注册，使用更多功能'}}</view>
+				<view class="detail">
+					<view class="name text-cut">{{user && user.name ? user.name : '请登录'}}</view>
+					<view class="desc" wx:if="{{!user}}">
+						<button bindtap="bindWxLogin">微信登录</button>
 					</view>
 				</view> 
 			</view>
@@ -20,50 +20,53 @@
 
 		<!--down area begin-->
 		<view class="down padding-project">
-			<view class="comm-list menu today-card card-project shadow-project">
-				<view class="today">
-					<view class="title">我的今日{{skin.MEET_NAME}}</view>
-					<view class="list">
-						<view class="item" wx:if="{{myTodayList===null}}">
-							<view class="load loading text-s text-project" style="line-height:1!important"></view>
-						</view>
-						<view wx:elif="{{myTodayList.length==0}}" class="item">
-							<view class="text-normal text-grey" style="line-height:1!important">您今天没有{{skin.MEET_NAME}}哦~ </view>
-						</view>
-						<view class="item" bindtap="url" data-url="../join_detail/my_join_detail?id={{item._id}}" wx:for="{{myTodayList}}" wx:key="key">
-							<view class="time">
-								<text>{{item.JOIN_MEET_TIME_START}}~{{item.JOIN_MEET_TIME_END}}</text>
 
-								<text wx:if="{{item.JOIN_STATUS==1}}" class="text-green status">预约成功{{item.JOIN_IS_CHECKIN==1?'，已签到':''}}</text>
-
-								<text wx:elif="{{item.JOIN_STATUS==10}}" class="text-grey status">已取消</text>
-
-								<text wx:elif="{{item.JOIN_STATUS==99}}" class="text-orange status">系统取消</text>
-
+			<!-- Logged in user -->
+			<block wx:if="{{user}}">
+				<view class="comm-list menu today-card card-project shadow-project">
+					<view class="today">
+						<view class="title">我的今日{{skin.MEET_NAME}}</view>
+						<view class="list">
+							<view class="item" wx:if="{{myTodayList===null}}">
+								<view class="load loading text-s text-project" style="line-height:1!important"></view>
 							</view>
-							<view class="project text-cut">{{item.JOIN_MEET_TITLE}}</view>
+							<view wx:elif="{{myTodayList.length==0}}" class="item">
+								<view class="text-normal text-grey" style="line-height:1!important">您今天没有{{skin.MEET_NAME}}哦~ </view>
+							</view>
+							<view class="item" bindtap="url" data-url="../join_detail/my_join_detail?id={{item._id}}" wx:for="{{myTodayList}}" wx:key="key">
+								<view class="time">
+									<text>{{item.JOIN_MEET_TIME_START}}~{{item.JOIN_MEET_TIME_END}}</text>
+
+									<text wx:if="{{item.JOIN_STATUS==1}}" class="text-green status">预约成功{{item.JOIN_IS_CHECKIN==1?'，已签到':''}}</text>
+
+									<text wx:elif="{{item.JOIN_STATUS==10}}" class="text-grey status">已取消</text>
+
+									<text wx:elif="{{item.JOIN_STATUS==99}}" class="text-orange status">系统取消</text>
+
+								</view>
+								<view class="project text-cut">{{item.JOIN_MEET_TITLE}}</view>
+							</view>
 						</view>
 					</view>
 				</view>
 
-			</view>
-
-			<!--base begin -->
-			<view class="comm-list menu card-project shadow-project">
-				<view class="item arrow" bindtap="url" data-url="../join/my_join">
-					<view class="content">
-						<text class="icon-activityfill my-icon-project text-project"></text>
-						<text class="text-black">我的所有{{skin.MEET_NAME}}</text>
+				<!--base begin -->
+				<view class="comm-list menu card-project shadow-project">
+					<view class="item arrow" bindtap="url" data-url="../join/my_join">
+						<view class="content">
+							<text class="icon-activityfill my-icon-project text-project"></text>
+							<text class="text-black">我的所有{{skin.MEET_NAME}}</text>
+						</view>
+					</view>
+					<view class="item arrow" bindtap="url" data-url="../edit/my_edit">
+						<view class="content">
+							<text class="icon-edit my-icon-project text-project"></text>
+							<text class="text-black">编辑个人信息</text>
+						</view>
 					</view>
 				</view>
-				<view class="item arrow" bindtap="url" data-url="../edit/my_edit">
-					<view class="content">
-						<text class="icon-edit my-icon-project text-green"></text>
-						<text class="text-black">修改我的个人资料</text>
-					</view>
-				</view>
-			</view>
-			<!--base end -->
+				<!--base end -->
+			</block>
 
 			<!--sys begin -->
 			<view class="comm-list menu card-project shadow-project">
@@ -88,12 +91,18 @@
 					</view>
 				</view>
 
-
-				<view class="item arrow" bindtap="bindSetTap">
+				<view wx:if="{{user}}" class="item arrow" bindtap="bindSetTap">
 					<view class="content">
 						<text class="icon-settings my-icon-project text-grey"></text>
 						<text wx:if="{{skin.IS_SUB}}" class="text-red text-bold ">系统后台管理<text class="text-grey text-normal">（可试用）</text></text>
 						<text wx:else class="text-black">设置</text>
+					</view>
+				</view>
+
+				<view wx:if="{{user}}" class="item arrow" bindtap="bindLogoutTap">
+					<view class="content">
+						<text class="icon-exit my-icon-project text-red"></text>
+						<text class="text-black">退出登录</text>
 					</view>
 				</view>
 

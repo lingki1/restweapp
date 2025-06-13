@@ -160,16 +160,26 @@ async function del(collectionName, where) {
  * @param {*} where 
  */
 async function count(collectionName, where) {
-	let query = await db.collection(collectionName);
+	try {
+		let query = await db.collection(collectionName);
 
-	// 查询条件
-	if (typeof (where) == 'string' || typeof (where) == 'number')
-		query = await query.doc(where);
-	else
-		query = await query.where(fmtWhere(where));
+		// 查询条件
+		if (typeof (where) == 'string' || typeof (where) == 'number') {
+			query = await query.doc(where);
+		} else {
+			query = await query.where(fmtWhere(where));
+		}
 
-	query = await query.count();
-	return query.total;
+		const result = await query.count();
+		return result.total;
+	} catch (err) {
+		console.error(`Error in count for collection ${collectionName} with where ${JSON.stringify(where)}:`, err);
+		//  errCode: -501001 resource system error | errMsg: collection.count:fail  500 Internal Server Error
+		//  err.errCode === -501001
+		//  Можно добавить логику повторных попыток или вернуть значение по умолчанию, если это уместно
+		//  For now, rethrow the error to be handled by the caller
+		throw err;
+	}
 }
 
 
@@ -372,7 +382,18 @@ async function isExistCollection(collectionName) {
 		return true;
 
 	} catch (err) {
-		return false;
+		// -501009: collection not found (err.message: "collection not found")
+		// -501019: Collection not found (err.message: "[ResourceNotFound.CollectionNotFound] collection not found")
+		if (err.errCode === -501009 || err.errCode === -501019 || (err.message && (err.message.includes('collection not found') || err.message.includes('CollectionNotFound')))) {
+			return false;
+		}
+		// For other errors, we assume the collection might exist or there's another issue.
+		// It's safer to return true to prevent trying to create it again if the error is not 'not found'.
+		// However, the original logic was to return false for any error, which would lead to repeated create attempts.
+		// The error ResourceUnavailable.ResourceExist (-501001) means it exists.
+		// So if it's not a 'not found' error, it likely exists or there's a different problem.
+		console.warn(`isExistCollection for '${collectionName}' encountered an error: ${err.errCode} ${err.message}. Assuming collection might exist or another issue occurred.`);
+		return true; //  If it's not a 'not found' error, assume it exists to prevent re-creation attempts that would fail.
 	}
 }
 
