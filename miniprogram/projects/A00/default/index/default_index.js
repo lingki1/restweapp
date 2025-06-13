@@ -14,4 +14,10 @@ Page({
 			isModifyNavColor: true
 		});
 	},
+
+	goToCalendar: function() {
+		wx.switchTab({
+			url: '/projects/A00/calendar/index/calendar_index'
+		});
+	},
 })

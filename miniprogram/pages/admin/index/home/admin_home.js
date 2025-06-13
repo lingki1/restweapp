@@ -120,6 +120,14 @@ Page({
 		} catch (err) {
 			console.error(err);
 		}
+	},
+
+	bindGotoAllJoinList: function () {
+		let meetId = (this.data.data && this.data.data.meetId) || this.data.meetId || '';
+		let title = encodeURIComponent('全部预约');
+		wx.navigateTo({
+			url: '../../meet/record/admin_record_list?meetId=' + meetId + '&title=' + title
+		});
 	}
 
 })

@@ -23,7 +23,7 @@
 			</view>
 			<view wx:if="{{formStyleSetFocus}}" class="hint-desc error">{{formStyleSetFocus}}</view>
 
-			<view class="form-group arrow" bindtap="url" data-url="../content/admin_meet_content">
+			<view class="form-group arrow" bindtap="url" data-url="../content/admin_meet_content?id={{id}}">
 				<view class="title must">详细介绍<text class="text-grey text-normal margin-left-xs">(必填)</text></view>
 				<view wx:if="{{contentDesc==='未填写'}}" class="form-text text-orange">详细介绍未填写</view>
 				<view wx:else class="form-text">{{contentDesc}}</view>

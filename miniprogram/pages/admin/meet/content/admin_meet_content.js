@@ -9,7 +9,8 @@ Page({
 		formContent: [{
 			type: 'text',
 			val: '', 
-		}]
+		}],
+		meetId: null
 	},
 
 	/**
@@ -17,19 +18,26 @@ Page({
 	 */
 	onLoad: async function (options) {
 		if (!AdminBiz.isAdmin(this)) return;
-
+		let meetId = options.id;
+		if (!meetId) {
+			// 兼容老逻辑
+			let parent = pageHelper.getPrevPage(2);
+			if (parent && parent.data && parent.data.id) {
+				meetId = parent.data.id;
+			}
+		}
+		if (!meetId) {
+			wx.showToast({ title: '找不到关联ID', icon: 'none' });
+			return;
+		}
+		this.setData({ meetId });
 		let parent = pageHelper.getPrevPage(2);
-		if (!parent) return;
-
-		let formContent = parent.data.formContent;
-		if (formContent && formContent.length > 0)
-			this.setData({
-				formContent
-			});
+		if (parent && parent.data && parent.data.formContent) {
+			let formContent = parent.data.formContent;
+			if (formContent && formContent.length > 0)
+				this.setData({ formContent });
+		}
 	},
-
-
-
 
 	/**
 	 * 生命周期函数--监听页面初次渲染完成
@@ -68,28 +76,38 @@ Page({
 		pageHelper.model(this, e);
 	},
 
-	bindSaveTap: function (e) {
-		let parent = pageHelper.getPrevPage(2);
-		if (!parent) return;
-		parent.setData({
-			formContent: this.data.formContent
-		});
-	},
-
-	bindSaveTap: function (e) {
+	bindSaveTap: async function (e) {
 		let formContent = this.selectComponent("#contentEditor").getNodeList();
-
+		let meetId = this.data.meetId;
+		if (!meetId) {
+			wx.showToast({ title: '找不到关联ID', icon: 'none' });
+			return;
+		}
+		// 调用云函数保存内容
+		wx.showLoading({ title: '保存中...', mask: true });
+		try {
+			await wx.cloud.callFunction({
+				name: 'cloud',
+				data: {
+					$url: 'admin/meet_update_content',
+					meetId,
+					content: formContent
+				}
+			});
+			wx.showToast({ title: '保存成功', icon: 'success' });
+		} catch (err) {
+			wx.showToast({ title: '保存失败', icon: 'none' });
+			return;
+		}
+		// 同步到上级页面
 		let parent = pageHelper.getPrevPage(2);
-		if (!parent) return;
-		
-		parent.setData({
-			formContent
-		},  () => {
-			parent._setContentDesc();
-		});
-
-		wx.navigateBack({
-			delta: 0,
-		});
+		if (parent) {
+			parent.setData({
+				formContent
+			}, () => {
+				parent._setContentDesc && parent._setContentDesc();
+			});
+		}
+		wx.navigateBack({ delta: 0 });
 	}
 })

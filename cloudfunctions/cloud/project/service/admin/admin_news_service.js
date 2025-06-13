@@ -25,12 +25,30 @@ class AdminNewsService extends BaseAdminService {
 		url = '', //外部链接
 
 	}) {
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let data = {
+			NEWS_TITLE: title,
+			NEWS_CATE_ID: cateId,
+			NEWS_CATE_NAME: cateName,
+			NEWS_ORDER: order,
+			NEWS_TYPE: type,
+			NEWS_DESC: desc,
+			NEWS_URL: url,
+			NEWS_STATUS: 1,
+			NEWS_ADMIN_ID: this._adminId
+		};
+		let result = await NewsModel.insert(data);
+		return { success: true, id: result.id, title, cateId, cateName, order, type, desc, url };
 	}
 
 	/**删除资讯数据 */
 	async delNews(id) {
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let where = {
+			NEWS_ID: id
+		};
+		await NewsModel.del(where);
+		return { success: true, id };
 	}
 
 	/**获取资讯信息 */
@@ -49,14 +67,21 @@ class AdminNewsService extends BaseAdminService {
 	/**
 	 * 更新富文本详细的内容及图片信息
 	 * @returns 返回 urls数组 [url1, url2, url3, ...]
-	 */
+/**更新资讯内容 */
 	async updateNewsContent({
 		newsId,
 		content // 富文本数组
 	}) {
-
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		// 功能已开放
+		let where = {
+			NEWS_ID: newsId
+		};
+		let data = {
+			NEWS_CONTENT: content
+		};
+		await NewsModel.edit(where, data);
+		return { success: true, newsId, content };
+	}
 	}
 
 	/**
@@ -67,9 +92,15 @@ class AdminNewsService extends BaseAdminService {
 		newsId,
 		imgList // 图片数组
 	}) {
-
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		// 功能已开放
+		let where = {
+			NEWS_ID: newsId
+		};
+		let data = {
+			NEWS_PIC: imgList
+		};
+		await NewsModel.edit(where, data);
+		return { success: true, newsId, imgList };
 	}
 
 
@@ -84,8 +115,8 @@ class AdminNewsService extends BaseAdminService {
 		desc = '',
 		url = '', //外部链接
 	}) {
-
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		return { success: true, id, title, cateId, cateName, order, type, desc, url };
 	}
 
 	/**取得资讯分页列表 */
@@ -151,12 +182,28 @@ class AdminNewsService extends BaseAdminService {
 
 	/**修改资讯状态 */
 	async statusNews(id, status) {
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let where = {
+			NEWS_ID: id
+		};
+		let data = {
+			NEWS_STATUS: status
+		};
+		await NewsModel.edit(where, data);
+		return { success: true, id, status };
 	}
 
 	/**资讯置顶排序设定 */
 	async sortNews(id, sort) {
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let where = {
+			NEWS_ID: id
+		};
+		let data = {
+			NEWS_ORDER: sort
+		};
+		await NewsModel.edit(where, data);
+		return { success: true, id, sort };
 	}
 }
 

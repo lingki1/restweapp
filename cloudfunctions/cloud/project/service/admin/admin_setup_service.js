@@ -19,7 +19,16 @@ class AdminSetupService extends BaseAdminService {
 		aboutPic
 	}) {
 
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let where = {
+			SETUP_ID: 'setup'
+		};
+		let data = {
+			SETUP_ABOUT: about,
+			SETUP_ABOUT_PIC: aboutPic
+		};
+		await SetupModel.edit(where, data);
+		return { success: true, about, aboutPic };
 	}
 
 	/** 联系我们设置 */
@@ -30,7 +39,18 @@ class AdminSetupService extends BaseAdminService {
 		servicePic,
 	}) {
 
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let where = {
+			SETUP_ID: 'setup'
+		};
+		let data = {
+			SETUP_ADDRESS: address,
+			SETUP_PHONE: phone,
+			SETUP_OFFICE_PIC: officePic,
+			SETUP_SERVICE_PIC: servicePic
+		};
+		await SetupModel.edit(where, data);
+		return { success: true, address, phone, officePic, servicePic };
 	}
 
 	/** 小程序码 */

@@ -12,24 +12,44 @@ class AdminTempService extends BaseAdminService {
 	/**添加模板 */
 	async insertTemp({
 		name,
-		times,
+		times
 	}) {
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let data = {
+			TEMP_NAME: name,
+			TEMP_TIMES: times
+		};
+		let result = await TempModel.insert(data);
+		return { success: true, id: result.id, name, times };
 	}
 
 	/**更新数据 */
 	async editTemp({
 		id,
-		limit,
-		isLimit
+		name,
+		times
 	}) {
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let where = {
+			TEMP_ID: id
+		};
+		let data = {
+			TEMP_NAME: name,
+			TEMP_TIMES: times
+		};
+		await TempModel.edit(where, data);
+		return { success: true, id, name, times };
 	}
 
 
-	/**删除数据 */
+	/**删除模板 */
 	async delTemp(id) {
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
+		// 功能已开放
+		let where = {
+			TEMP_ID: id
+		};
+		await TempModel.del(where);
+		return { success: true, id };
 	}
 
 

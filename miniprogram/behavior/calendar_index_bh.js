@@ -35,6 +35,8 @@ module.exports = Behavior({
 				this.setData({
 					list: null
 				});
+				// 添加强制刷新参数，确保不使用缓存
+				params.forceRefresh = timeHelper.time('YMDhms');
 				await cloudHelper.callCloudSumbit('meet/list_by_day', params, opts).then(res => {
 					this.setData({
 						list: res.data,
@@ -54,6 +56,8 @@ module.exports = Behavior({
 				title: 'bar'
 			}
 			try {
+				// 添加强制刷新参数，确保不使用缓存
+				params.forceRefresh = timeHelper.time('YMDhms');
 				await cloudHelper.callCloudSumbit('meet/list_has_day', params, opts).then(res => {
 					this.setData({
 						hasDays: res.data,

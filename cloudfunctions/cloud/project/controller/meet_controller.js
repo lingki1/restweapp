@@ -40,12 +40,23 @@ class MeetController extends BaseController {
 		// 数据校验
 		let rules = {
 			day: 'must|date|name=日期',
+			forceRefresh: 'string|name=强制刷新',
 		};
 
 		// 取得数据
 		let input = this.validateData(rules);
 
 		let cacheKey = CACHE_CALENDAR_INDEX + '_' + input.day;
+		
+		// 如果有强制刷新参数，则跳过缓存直接获取数据
+		if (input.forceRefresh) {
+			let service = new MeetService();
+			let list = await service.getMeetListByDay(input.day);
+			// 更新缓存
+			cacheUtil.set(cacheKey, list, config.CACHE_CALENDAR_TIME);
+			return list;
+		}
+		
 		let list = await cacheUtil.get(cacheKey);
 		if (list) {
 			return list;
@@ -64,6 +75,7 @@ class MeetController extends BaseController {
 		// 数据校验
 		let rules = {
 			day: 'must|date|name=日期',
+			forceRefresh: 'string|name=强制刷新',
 		};
 
 		// 取得数据
@@ -71,6 +83,16 @@ class MeetController extends BaseController {
 
 
 		let cacheKey = CACHE_CALENDAR_HAS_DAY + '_' + input.day;
+		
+		// 如果有强制刷新参数，则跳过缓存直接获取数据
+		if (input.forceRefresh) {
+			let service = new MeetService();
+			let list = await service.getHasDaysFromDay(input.day);
+			// 更新缓存
+			cacheUtil.set(cacheKey, list, config.CACHE_CALENDAR_TIME);
+			return list;
+		}
+		
 		let list = await cacheUtil.get(cacheKey);
 		if (list) {
 			return list;

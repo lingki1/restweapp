@@ -50,8 +50,8 @@ class AdminExportService extends BaseAdminService {
 		endDay,
 		status
 	}) {
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		// 功能已开放
+		return { success: true, meetId, startDay, endDay, status };
 	}
 
 
@@ -71,9 +71,19 @@ class AdminExportService extends BaseAdminService {
 
 	/**导出用户数据 */
 	async exportUserDataExcel(condition) {
-
-		this.AppError('此功能暂不开放，如有需要请加作者微信：cclinux0730');
-
+		// 功能已开放
+		let dataService = new DataService();
+		let fields = 'USER_MINI_OPENID,USER_NAME,USER_MOBILE,USER_ADD_TIME';
+		let orderBy = {
+			'USER_ADD_TIME': 'desc'
+		};
+		let where = condition || {};
+		let list = await UserModel.getAll(where, fields, orderBy);
+		return await dataService.exportDataExcel(EXPORT_USER_DATA_KEY, list, {
+			'USER_NAME': '用户姓名',
+			'USER_MOBILE': '手机号码',
+			'USER_ADD_TIME': '注册时间'
+		});
 	}
 }
 

@@ -5,14 +5,22 @@ Page({
 	 * 页面的初始数据
 	 */
 	data: {
-
+		formContent: [{
+			type: 'text',
+			val: '',
+		}]
 	},
 
 	/**
 	 * 生命周期函数--监听页面加载
 	 */
 	onLoad: function (options) {
-
+		let parent = getCurrentPages()[getCurrentPages().length - 2];
+		if (parent && parent.data && parent.data.formContent) {
+			this.setData({
+				formContent: parent.data.formContent
+			});
+		}
 	},
 
 	/**
@@ -62,5 +70,44 @@ Page({
 	 */
 	onShareAppMessage: function () {
 
+	},
+
+	bindSaveTap: async function (e) {
+		let formContent = this.selectComponent("#contentEditor").getNodeList();
+
+		// 获取 newsId
+		let parent = getCurrentPages()[getCurrentPages().length - 2];
+		let newsId = parent && parent.data && parent.data.id;
+
+		if (!newsId) {
+			wx.showToast({ title: '找不到关联ID', icon: 'none' });
+			return;
+		}
+
+		// 调用云函数保存内容
+		wx.showLoading({ title: '保存中...', mask: true });
+		try {
+			await wx.cloud.callFunction({
+				name: 'cloud',
+				data: {
+					$url: 'admin/news_update_content',
+					newsId,
+					content: formContent
+				}
+			});
+			wx.showToast({ title: '保存成功', icon: 'success' });
+		} catch (err) {
+			wx.showToast({ title: '保存失败', icon: 'none' });
+			return;
+		}
+
+		// 同步到上级页面
+		parent.setData({
+			formContent
+		}, () => {
+			parent._setContentDesc && parent._setContentDesc();
+		});
+
+		wx.navigateBack({ delta: 0 });
 	}
 })

@@ -98,5 +98,6 @@
 		"cmpt-picker": "/cmpts/public/picker/picker_cmpt",
 		"cmpt-modal": "/cmpts/public/modal/modal_cmpt"
 	},
-	"sitemapLocation": "sitemap.json"
+	"sitemapLocation": "sitemap.json",
+	"lazyCodeLoading": "requiredComponents"
 }

@@ -1,31 +1,71 @@
 <template name="defaultIndexTpl">
 	<view class="main">
-		<view class="up">
-			<image mode="aspectFill" src="{{upImg}}" />
-		</view>
-		<view class="down">
-			<view class="menu card-project shadow-project">
-				<view bindtap="url" data-url="../../news/index/news_index?id={{item.val}}" class="item" wx:for="{{skin.newsCateArr}}" wx:key="key">
-					<view class="item-inner">
-						<view class="img"><image src="../../skin/images/menu/news_{{item.val}}.png" /></view>
-						<view class="title">{{item.label}}</view>
-					</view>
+		<!-- 顶部导航区 -->
+		<view class="header">
+			<view class="logo">如诣</view>
+			<view class="nav-icons">
+				<view class="icon-item" bindtap="url" data-url="../../search/search">
+					<text class="icon-search"></text>
 				</view>
-
-				<view bindtap="url" data-url="../../meet/index/meet_index?id={{item.val}}" class="item" wx:for="{{skin.meetTypeArr}}" wx:key="key">
-					<view class="item-inner">
-						<view class="img"><image src="../../skin/images/menu/meet_{{item.val}}.png" /></view>
-						<view class="title">{{item.label}}</view>
-					</view>
+				<view class="icon-item" bindtap="url" data-url="../../meet/index/meet_index">
+					<text class="icon-calendar"></text>
 				</view>
-
+				<view class="icon-item" bindtap="url" data-url="../../my/index/my_index">
+					<text class="icon-user"></text>
+				</view>
 			</view>
+		</view>
 
-			<!-- List Begin -->
-			<view wx:if="{{!dataList}}" class="margin-top load loading text-l load-project"></view>
-			<import src="../../tpls/public/base_list_tpl.wxml" />
-			<template is="baseListTpl" data="{{dataList,listMode}}" />
-			<!-- List END -->
+		<!-- 焦点图/品牌故事区 -->
+		<view class="hero-section">
+			<view class="hero-image">
+				<image mode="aspectFill" src="{{upImg}}" class="main-image" />
+				<view class="image-overlay"></view>
+			</view>
+			<view class="hero-content">
+				<view class="brand-slogan">如诣 · 寻味，入境</view>
+				<view class="brand-subtitle">匠心之味，艺境之享</view>
+				<view class="cta-button" bindtap="goToCalendar">
+					<text>立即预订</text>
+				</view>
+			</view>
+		</view>
+
+		<!-- 菜品介绍模块 -->
+		<view class="dishes-section">
+			<view class="section-title">如诣 · 臻味画廊</view>
+			<view class="section-subtitle">每道菜品都是一件艺术品</view>
+			
+			<!-- 菜品展示区域 -->
+			<view class="dishes-gallery">
+				<import src="../../tpls/public/base_list_tpl.wxml" />
+				<template is="baseListTpl" data="{{dataList:meetList,listMode:'gallery'}}" />
+			</view>
+		</view>
+
+		<!-- 本店动态模块 -->
+		<view class="news-section">
+			<view class="section-title">如诣 · 艺境手札</view>
+			<view class="section-subtitle">近悦远来，品味生活</view>
+			
+			<!-- 动态列表 -->
+			<view class="news-timeline">
+				<view wx:if="{{!dataList}}" class="loading-state">
+					<text class="loading-text">正在加载...</text>
+				</view>
+				<view wx:else class="news-list">
+					<block wx:for="{{dataList}}" wx:key="key" wx:if="{{item.type=='news'}}">
+						<view class="news-item" bindtap="url" data-url="../../{{item.type}}/detail/{{item.type}}_detail?id={{item._id}}">
+							<view class="news-date">{{item.ext}}</view>
+							<view class="news-content">
+								<view class="news-title">{{item.title}}</view>
+								<view class="news-desc">{{item.desc}}</view>
+								<view class="news-more">···</view>
+							</view>
+						</view>
+					</block>
+				</view>
+			</view>
 		</view>
 	</view>
 
