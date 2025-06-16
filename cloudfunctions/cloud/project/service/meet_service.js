@@ -112,12 +112,12 @@ class MeetService extends BaseService {
 
 
 	// 预约前检测
-	async beforeJoin(userId, meetId, timeMark) {
-		await this.checkMeetRules(userId, meetId, timeMark);
+	async beforeJoin(userId, meetId, timeMark, selectedSeats = []) {
+		await this.checkMeetRules(userId, meetId, timeMark, selectedSeats);
 	}
 
 	// 预约逻辑
-	async join(userId, meetId, timeMark, forms) {
+	async join(userId, meetId, timeMark, forms, seats) {
 		// 预约时段是否存在
 		let meetWhere = {
 			_id: meetId
@@ -137,8 +137,8 @@ class MeetService extends BaseService {
 		if (!timeSet)
 			this.AppError('预约时段选择错误3，请重新选择');
 
-		// 规则校验
-		await this.checkMeetRules(userId, meetId, timeMark);
+		// 规则校验，包括座位冲突检查
+		await this.checkMeetRules(userId, meetId, timeMark, seats);
 
 
 		let data = {};
@@ -155,6 +155,7 @@ class MeetService extends BaseService {
 		data.JOIN_START_TIME = timeUtil.time2Timestamp(daySet.day + ' ' + timeSet.start + ':00');
 
 		data.JOIN_FORMS = forms;
+		data.JOIN_SEATS = seats || []; // 确保座位信息被保存
 
 		data.JOIN_STATUS = JoinModel.STATUS.SUCC;
 		data.JOIN_CODE = dataUtil.genRandomIntString(15);
@@ -225,7 +226,7 @@ class MeetService extends BaseService {
 	}
 
 	// 预约时段人数和状态控制校验
-	async checkMeetTimeControll(meet, timeMark) {
+	async checkMeetTimeControll(meet, timeMark, selectedSeats = []) {
 		if (!meet) this.AppError('预约时段设置错误, 预约项目不存在');
 
 		let daySet = this.getDaySetByTimeMark(meet, timeMark); // 当天设置
@@ -234,28 +235,46 @@ class MeetService extends BaseService {
 		if (!daySet || !timeSet) this.AppError('预约时段设置错误day&time');
 
 		let statusDesc = timeSet.status == 1 ? '开启' : '关闭';
-		let limitDesc = '';
-		if (timeSet.isLimit) {
-			limitDesc = '人数上限MAX=' + timeSet.limit;
-		} else
-			limitDesc = '人数不限制NO';
-
 		this._meetLog(meet, `------------------------------`);
-		this._meetLog(meet, `#预约时段控制,预约日期=<${daySet.day}>`, `预约时段=[${timeSet.start}-${timeSet.end}],状态=${statusDesc}, ${limitDesc} 当前预约成功人数=${timeSet.stat.succCnt}`);
+		this._meetLog(meet, `#预约时段控制,预约日期=<${daySet.day}>`, `预约时段=[${timeSet.start}-${timeSet.end}],状态=${statusDesc}`);
 
 		if (timeSet.status == 0) this.AppError('该时段预约已经关闭，请选择其他');
 
-		// 时段总人数限制
-		if (timeSet.isLimit) {
-			if (timeSet.stat.succCnt >= timeSet.limit) {
-				this.AppError('该时段预约人员已满，请选择其他');
+		// 座位占用检查
+		let where = {
+			JOIN_MEET_ID: meet._id,
+			JOIN_MEET_TIME_MARK: timeMark,
+			JOIN_STATUS: JoinModel.STATUS.SUCC
+		};
+		let joins = await JoinModel.getAll(where, 'JOIN_SEATS');
+		let bookedSeats = [];
+		
+		// 收集所有已预约的座位
+		for (let join of joins) {
+			if (join.JOIN_SEATS && Array.isArray(join.JOIN_SEATS)) {
+				bookedSeats = bookedSeats.concat(join.JOIN_SEATS);
 			}
+		}
+
+		// 检查是否有座位冲突
+		if (selectedSeats && selectedSeats.length > 0) {
+			for (let seat of selectedSeats) {
+				if (bookedSeats.includes(seat)) {
+					this.AppError(`座位${seat}号已被预约，请选择其他座位`);
+				}
+			}
+		}
+		
+		// 检查总座位数限制
+		let seatCount = meet.MEET_SEAT_COUNT || 0;
+		if (seatCount > 0 && bookedSeats.length >= seatCount) {
+			this.AppError('该时段预约人员已满，请选择其他');
 		}
 	}
 
 
 	/** 报名规则校验 */
-	async checkMeetRules(userId, meetId, timeMark) {
+	async checkMeetRules(userId, meetId, timeMark, selectedSeats = []) {
 		// 预约时段是否存在
 		let meetWhere = {
 			_id: meetId
@@ -267,7 +286,7 @@ class MeetService extends BaseService {
 		}
 
 		// 预约时段人数和状态控制校验
-		await this.checkMeetTimeControll(meet, timeMark);
+		await this.checkMeetTimeControll(meet, timeMark, selectedSeats);
 
 		// 截止规则
 		await this.checkMeetEndSet(meet, timeMark);
@@ -384,7 +403,7 @@ class MeetService extends BaseService {
 		let ret = {};
 		ret.MEET_DAYS_SET = getDaysSet;
 
-		ret.MEET_IS_SHOW_LIMIT = meet.MEET_IS_SHOW_LIMIT;
+		ret.MEET_IS_SHOW_LIMIT = meet.MEET_IS_SHOW_LIMIT || false;
 		ret.MEET_TITLE = meet.MEET_TITLE;
 		ret.MEET_CONTENT = meet.MEET_CONTENT;
 
@@ -456,7 +475,15 @@ class MeetService extends BaseService {
 		let meet = await this.getMeetOneDay(meetId, day, where, fields);
 		if (!meet) return null;
 
-		let dayDesc = timeUtil.fmtDateCHN(this.getDaySetByTimeMark(meet, timeMark).day);
+		let daySet = this.getDaySetByTimeMark(meet, timeMark);
+		if (!daySet || daySet.day === undefined) {
+			console.error(`[MeetService.detailForJoin] Failed to get daySet or daySet.day is undefined for meetId=${meetId}, timeMark=${timeMark}. meet.MEET_DAYS_SET:`, meet.MEET_DAYS_SET);
+			// Handle error appropriately, e.g., return null or throw an error
+			// For now, returning null to prevent further processing if essential data is missing.
+			// Or, provide a default dayDesc if that makes sense for the application.
+			return null; 
+		}
+		let dayDesc = timeUtil.fmtDateCHN(daySet.day);
 
 		let timeSet = this.getTimeSetByTimeMark(meet, timeMark);
 		let timeDesc = timeSet.start + '～' + timeSet.end;
@@ -502,6 +529,26 @@ class MeetService extends BaseService {
 		return meet;
 	}
 
+	/** 获取指定时段的已预约座位 */
+	async getReservedSeats(meetId, timeMark) {
+		let where = {
+			JOIN_MEET_ID: meetId,
+			JOIN_MEET_TIME_MARK: timeMark,
+			JOIN_STATUS: JoinModel.STATUS.SUCC
+		};
+		let joins = await JoinModel.getAll(where, 'JOIN_SEATS');
+		
+		let reservedSeats = [];
+		for (let join of joins) {
+			if (join.JOIN_SEATS && Array.isArray(join.JOIN_SEATS)) {
+				reservedSeats = reservedSeats.concat(join.JOIN_SEATS);
+			}
+		}
+		
+		// 去重并排序
+		return [...new Set(reservedSeats)].sort((a, b) => a - b);
+	}
+
 	/** 获取某天可用时段 */
 	async getUsefulTimesByDaysSet(meetId, day) {
 		let where = {
@@ -536,7 +583,7 @@ class MeetService extends BaseService {
 			'MEET_ADD_TIME': 'desc'
 		};
 
-		let fields = 'MEET_TITLE,MEET_DAYS_SET,MEET_STYLE_SET';
+		let fields = 'MEET_TITLE,MEET_DAYS_SET,MEET_STYLE_SET,MEET_SEAT_COUNT';
 
 		let list = await MeetModel.getAll(where, fields, orderBy);
 
@@ -547,13 +594,17 @@ class MeetService extends BaseService {
 
 			if (usefulTimes.length == 0) continue;
 
+			// 为每个时段创建单独的项目条目，而不是合并
+			for (let timeSlot of usefulTimes) {
 			let node = {};
-			node.timeDesc = usefulTimes.length > 1 ? usefulTimes.length + '个时段' : usefulTimes[0].start;
+				node.timeMark = timeSlot.mark;
+				node.timeDesc = timeSlot.start + '～' + timeSlot.end;
 			node.title = list[k].MEET_TITLE;
-			node.pic = list[k].MEET_STYLE_SET.pic;
+			node.pic = list[k].MEET_STYLE_SET && list[k].MEET_STYLE_SET.pic ? list[k].MEET_STYLE_SET.pic : '';
 			node._id = list[k]._id;
+				node.seatCount = list[k].MEET_SEAT_COUNT || 10;
 			retList.push(node);
-
+			}
 		}
 		return retList;
 	}
@@ -599,7 +650,6 @@ class MeetService extends BaseService {
 		let fields = 'MEET_TITLE,MEET_STYLE_SET,MEET_DAYS';
 
 		let where = {};
-		if (typeId && typeId !== '0') where.MEET_TYPE_ID = typeId;
 		console.log(typeId)
 		where.MEET_STATUS = ['in', [MeetModel.STATUS.COMM, MeetModel.STATUS.OVER]]; // 状态  
 
@@ -683,7 +733,7 @@ class MeetService extends BaseService {
 	/** 取得我的预约详情 */
 	async getMyJoinDetail(userId, joinId) {
 
-		let fields = 'JOIN_IS_CHECKIN,JOIN_REASON,JOIN_MEET_ID,JOIN_MEET_TITLE,JOIN_MEET_DAY,JOIN_MEET_TIME_START,JOIN_MEET_TIME_END,JOIN_STATUS,JOIN_ADD_TIME,JOIN_CODE,JOIN_FORMS';
+		let fields = 'JOIN_IS_CHECKIN,JOIN_REASON,JOIN_MEET_ID,JOIN_MEET_TITLE,JOIN_MEET_DAY,JOIN_MEET_TIME_START,JOIN_MEET_TIME_END,JOIN_STATUS,JOIN_ADD_TIME,JOIN_CODE,JOIN_FORMS,JOIN_SEATS';
 
 		let where = {
 			_id: joinId,

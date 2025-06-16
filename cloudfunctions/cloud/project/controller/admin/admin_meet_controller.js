@@ -247,12 +247,9 @@ class AdminMeetController extends BaseAdminController {
 
 		let rules = {
 			title: 'must|string|min:2|max:50|name=标题',
-			typeId: 'must|id|name=分类',
-			typeName: 'must|string|name=分类',
 			order: 'must|int|min:1|max:9999|name=排序号',
-			daysSet: 'must|array|name=预约时间设置', 
-			isShowLimit: 'must|int|in:0,1|name=是否显示可预约人数', 
-
+			seats: 'must|int|min:0|max:9999|name=座位数',
+			daysSet: 'must|array|name=预约时间设置',
 			formSet: 'must|array|name=用户资料设置',
 		};
 
@@ -296,13 +293,9 @@ class AdminMeetController extends BaseAdminController {
 		let rules = {
 			id: 'must|id',
 			title: 'must|string|min:2|max:50|name=标题',
-			typeId: 'must|id|name=分类',
-			typeName: 'must|string|name=分类',
 			order: 'must|int|min:1|max:9999|name=排序号',
+			seats: 'must|int|min:0|max:9999|name=座位数',
 			daysSet: 'must|array|name=预约时间设置',
-		 
-			isShowLimit: 'must|int|in:0,1|name=是否显示可预约人数', 
-
 			formSet: 'must|array|name=用户资料设置',
 		};
 
@@ -412,6 +405,7 @@ class AdminMeetController extends BaseAdminController {
 		let rules = {
 			name: 'must|string|min:1|max:20|name=名称',
 			times: 'must|array|name=模板时段',
+			seats: 'must|int|min:1|max:9999|name=座位数',
 		};
 
 		// 取得数据
@@ -430,8 +424,7 @@ class AdminMeetController extends BaseAdminController {
 
 		let rules = {
 			id: 'must|id',
-			isLimit: 'must|bool|name=是否限制',
-			limit: 'must|int|name=人数上限',
+			seats: 'must|int|min:1|max:9999|name=座位数',
 		};
 
 		// 取得数据

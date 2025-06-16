@@ -20,14 +20,23 @@ class AdminSetupService extends BaseAdminService {
 	}) {
 
 		// 功能已开放
-		let where = {
-			SETUP_ID: 'setup'
-		};
-		let data = {
-			SETUP_ABOUT: about,
-			SETUP_ABOUT_PIC: aboutPic
-		};
-		await SetupModel.edit(where, data);
+		let where = {};
+		
+		// 先检查记录是否存在，如果不存在则创建
+		let setup = await SetupModel.getOne(where);
+		if (!setup) {
+			let insertData = {
+				SETUP_ABOUT: about,
+				SETUP_ABOUT_PIC: aboutPic
+			};
+			await SetupModel.insert(insertData);
+		} else {
+			let data = {
+				SETUP_ABOUT: about,
+				SETUP_ABOUT_PIC: aboutPic
+			};
+			await SetupModel.edit(where, data);
+		}
 		return { success: true, about, aboutPic };
 	}
 
@@ -40,16 +49,27 @@ class AdminSetupService extends BaseAdminService {
 	}) {
 
 		// 功能已开放
-		let where = {
-			SETUP_ID: 'setup'
-		};
-		let data = {
-			SETUP_ADDRESS: address,
-			SETUP_PHONE: phone,
-			SETUP_OFFICE_PIC: officePic,
-			SETUP_SERVICE_PIC: servicePic
-		};
-		await SetupModel.edit(where, data);
+		let where = {};
+		
+		// 先检查记录是否存在，如果不存在则创建
+		let setup = await SetupModel.getOne(where);
+		if (!setup) {
+			let insertData = {
+				SETUP_ADDRESS: address,
+				SETUP_PHONE: phone,
+				SETUP_OFFICE_PIC: officePic,
+				SETUP_SERVICE_PIC: servicePic
+			};
+			await SetupModel.insert(insertData);
+		} else {
+			let data = {
+				SETUP_ADDRESS: address,
+				SETUP_PHONE: phone,
+				SETUP_OFFICE_PIC: officePic,
+				SETUP_SERVICE_PIC: servicePic
+			};
+			await SetupModel.edit(where, data);
+		}
 		return { success: true, address, phone, officePic, servicePic };
 	}
 

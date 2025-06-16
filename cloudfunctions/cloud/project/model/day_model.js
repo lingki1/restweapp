@@ -21,16 +21,15 @@ DayModel.DB_STRUCTURE = {
 
 	day: 'string|true|comment=日期 yyyy-mm-dd',
 	dayDesc: 'string|true|comment=描述',
-	times: 'array|true|comment=具体时间段',
+	times: 'array|true|comment=具体时间段，每个时段包含座位设置（seats）',
 	/*
 		{
 			1. mark=唯一性标识,
 			2. start=开始时间点hh:mm ～,  
 			3. end=结束时间点hh:mm, 
-			4. isLimit=是否人数限制, 
-			5. limit=报名上限,  
-			6. status=状态 0/1
-			7. stat:{ //统计数据 
+			4. seats=座位设置（如座位数或座位数组）,  
+			5. status=状态 0/1
+			6. stat:{ //统计数据 
 				succCnt=1预约成功*, 
 				cancelCnt=10已取消, 
 				adminCancelCnt=99后台取消

@@ -105,22 +105,18 @@ class AdminMeetService extends BaseAdminService {
 	async insertMeet(adminId, {
 		title,
 		order,
-		typeId,
-		typeName,
 		daysSet,
-		isShowLimit,
 		formSet,
+		seats,
 	}) {
 		// 数据库操作
 		let data = {
 			MEET_ADMIN_ID: adminId,
 			MEET_TITLE: title,
 			MEET_ORDER: order,
-			MEET_TYPE_ID: typeId,
-			MEET_TYPE_NAME: typeName,
 			MEET_DAYS: daysSet,
-			MEET_IS_SHOW_LIMIT: isShowLimit,
 			MEET_FORM_SET: formSet,
+			MEET_SEAT_COUNT: seats,
 			MEET_STATUS: 1
 		};
 
@@ -221,22 +217,18 @@ class AdminMeetService extends BaseAdminService {
 	async editMeet({
 		id,
 		title,
-		typeId,
-		typeName,
 		order,
 		daysSet,
-		isShowLimit,
-		formSet
+		formSet,
+		seats
 	}) {
 		// 数据库操作
 		let data = {
 			MEET_TITLE: title,
 			MEET_ORDER: order,
-			MEET_TYPE_ID: typeId,
-			MEET_TYPE_NAME: typeName,
 			MEET_DAYS: daysSet,
-			MEET_IS_SHOW_LIMIT: isShowLimit,
-			MEET_FORM_SET: formSet
+			MEET_FORM_SET: formSet,
+			MEET_SEAT_COUNT: seats
 		};
 
 		let where = { _id: id };

@@ -23,7 +23,7 @@
 		"pages/admin/index/login/admin_login",
 		"pages/admin/content/admin_content",
 		"pages/admin/meet/content/admin_meet_content",
-		"pages/admin/meet/cover/admin_meet_cover",
+		
 		"pages/admin/meet/edit/admin_meet_edit",
 		"pages/admin/meet/export/admin_join_export",
 		"pages/admin/meet/join/admin_meet_join",

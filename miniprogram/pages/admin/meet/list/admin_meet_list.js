@@ -234,8 +234,6 @@ Page({
 	},
 
 	_getSearchMenu: async function () {
-		let arr = await AdminMeetBiz.getTypeList();
-
 		let sortItems = [];
 		let sortMenus = [{
 				label: '全部',
@@ -258,13 +256,10 @@ Page({
 			},
 
 		];
-		sortMenus = sortMenus.concat(arr);
 		this.setData({
 			sortItems,
 			sortMenus
 		})
-
-
 	}
 
 })

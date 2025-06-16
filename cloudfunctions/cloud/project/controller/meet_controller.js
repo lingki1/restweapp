@@ -114,7 +114,6 @@ class MeetController extends BaseController {
 			sortType: 'string|name=搜索类型',
 			sortVal: 'name=搜索类型值',
 			orderBy: 'object|name=排序',
-			typeId: 'string',
 			page: 'must|int|default=1',
 			size: 'int',
 			isTotal: 'bool',
@@ -303,13 +302,14 @@ class MeetController extends BaseController {
 		let rules = {
 			meetId: 'must|id',
 			timeMark: 'must|string',
+			seats: 'array|name=座位',
 		};
 
 		// 取得数据
 		let input = this.validateData(rules);
 
 		let service = new MeetService();
-		return await service.beforeJoin(this._userId, input.meetId, input.timeMark);
+		return await service.beforeJoin(this._userId, input.meetId, input.timeMark, input.seats || []);
 	}
 
 	/** 预约提交 */
@@ -319,16 +319,30 @@ class MeetController extends BaseController {
 			meetId: 'must|id',
 			timeMark: 'must|string',
 			forms: 'must|array',
+			seats: 'must|array',
 		};
 
 		// 取得数据
 		let input = this.validateData(rules);
 
 		let service = new MeetService();
-		let admin = null;
-		return await service.join(this._userId, input.meetId, input.timeMark, input.forms);
+		return await service.join(this._userId, input.meetId, input.timeMark, input.forms, input.seats);
 	}
 
+	/** 获取已预约座位 */
+	async getReservedSeats() {
+		// 数据校验
+		let rules = {
+			meetId: 'must|id',
+			timeMark: 'must|string',
+		};
+
+		// 取得数据
+		let input = this.validateData(rules);
+
+		let service = new MeetService();
+		return await service.getReservedSeats(input.meetId, input.timeMark);
+	}
 
 	// 计算可约天数
 	_getLeaveDay(days) {

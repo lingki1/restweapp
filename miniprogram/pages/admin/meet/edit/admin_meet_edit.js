@@ -54,20 +54,12 @@ Page({
 
 		this.setData({
 			isLoad: true,
-
-
-			// 表单数据   
 			formTitle: meet.MEET_TITLE,
-			formTypeId: meet.MEET_TYPE_ID,
 			formContent: meet.MEET_CONTENT,
 			formOrder: meet.MEET_ORDER,
-			formStyleSet: meet.MEET_STYLE_SET,
-
 			formDaysSet: meet.MEET_DAYS_SET,
-
-			formIsShowLimit: meet.MEET_IS_SHOW_LIMIT,
-
 			formFormSet: meet.MEET_FORM_SET,
+			formSeats: meet.MEET_SEAT_COUNT || 0,
 		});
 	},
 
@@ -122,26 +114,20 @@ Page({
 		if (!AdminBiz.isAdmin(this)) return;
 
 		let data = this.data;
+		delete data.formTypeId; // 删除formTypeId字段
 		if (data.formTitle.length <= 0) return pageHelper.formHint(this, 'formTitle', '请填写「标题」');
 
-		if (data.formTypeId.length <= 0) return pageHelper.formHint(this, 'formTypeId', '请选择「分类」');
 
-		if (data.formStyleSet.pic.length <= 0) {
-			pageHelper.anchor('formStyleSet', this);
-			return pageHelper.formHint(this, 'formStyleSet', '封面图片未设置');
-		}
 		if (data.formDaysSet.length <= 0) {
 			pageHelper.anchor('formDaysSet', this);
 			return pageHelper.formHint(this, 'formDaysSet', '请配置「可预约时段」');
 		}
 		if (data.formFormSet.length <= 0) return pageHelper.showModal('请至少设置一项「用户填写资料」');
-
-		if (data.contentDesc.includes('未填写'))
-			return pageHelper.formHint(this, 'formContent', '请填写「详细介绍」');
+		
+		data.formSeats = Number(data.formSeats);
 
 		data = validate.check(data, AdminMeetBiz.CHECK_FORM, this);
 		if (!data) return;
-		data.typeName = AdminMeetBiz.getTypeName(data.typeId);
 
 		try {
 			// 先创建，再上传 
@@ -156,14 +142,6 @@ Page({
 				});
 				await AdminMeetBiz.updateMeetCotnentPic(meetId, formContent, this);
 			}
-
-			// 样式 提交处理
-			let formStyleSet = this.data.formStyleSet;
-			wx.showLoading({
-				title: '提交中...',
-				mask: true
-			});
-			if (!await AdminMeetBiz.updateMeetStyleSet(meetId, formStyleSet, this)) return;
 
 			let callback = async function () {
 				bizHelper.removeCacheList('admin-meet');
@@ -185,23 +163,20 @@ Page({
 		if (!AdminBiz.isAdmin(this)) return;
 
 		let data = this.data;
+		delete data.formTypeId; // 删除formTypeId字段
 		if (data.formTitle.length <= 0) return pageHelper.formHint(this, 'formTitle', '请填写「标题」');
 
-		if (data.formTypeId.length <= 0) return pageHelper.formHint(this, 'formTypeId', '请选择「分类」');
 
-		if (data.formStyleSet.pic.length <= 0) {
-			pageHelper.anchor('formStyleSet', this);
-			return pageHelper.formHint(this, 'formStyleSet', '封面图片未设置');
-		}
 		if (data.formDaysSet.length <= 0) {
 			pageHelper.anchor('formDaysSet', this);
 			return pageHelper.formHint(this, 'formDaysSet', '请配置「可预约时段」');
 		}
 		if (data.formFormSet.length <= 0) return pageHelper.showModal('请至少设置一项「用户填写资料」');
 
+		data.formSeats = Number(data.formSeats);
+
 		data = validate.check(data, AdminMeetBiz.CHECK_FORM, this);
 		if (!data) return;
-		data.typeName = AdminMeetBiz.getTypeName(data.typeId);
 
 		try {
 			let meetId = this.data.id;
@@ -218,21 +193,10 @@ Page({
 			});
 			if (!await AdminMeetBiz.updateMeetCotnentPic(meetId, formContent, this)) return;
 
-
-			// 样式 提交处理
-			let formStyleSet = this.data.formStyleSet;
-			wx.showLoading({
-				title: '提交中...',
-				mask: true
-			});
-			if (!await AdminMeetBiz.updateMeetStyleSet(meetId, formStyleSet, this)) return;
-
-
 			let callback = async function () { 
 				// 更新列表页面数据
 				let node = {
 					'MEET_TITLE': data.title,
-					'MEET_TYPE_NAME': data.typeName,
 					'MEET_DAYS_SET': data.daysSet,
 					'MEET_FORM_SET': data.formSet,
 					'MEET_EDIT_TIME': timeHelper.time('Y-M-D h:m:s'),

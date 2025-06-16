@@ -1,0 +1,17 @@
+.seat.available {
+  background-color: #f0f0f0; /* Default available color */
+  border: 1px solid #ccc;
+}
+
+.seat.selected {
+  background-color: #4CAF50; /* Green for selected */
+  color: white;
+  border: 1px solid #388E3C;
+}
+
+.seat.reserved {
+  background-color: #f44336; /* Red for reserved */
+  color: white;
+  border: 1px solid #d32f2f;
+  pointer-events: none; /* Prevent clicking on reserved seats */
+}

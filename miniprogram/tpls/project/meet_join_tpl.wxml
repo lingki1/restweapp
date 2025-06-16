@@ -2,6 +2,16 @@
 	<view wx:if="{{isLoad===null}}" class="margin-top load notexist text-l load-project"></view>
 	<view wx:if="{{isLoad===false}}" class="margin-top load loading text-l load-project"></view>
 
+	<!-- 需要登录提示 -->
+	<view wx:if="{{needLogin}}" class="main padding-project">
+		<view class="text-center margin-top-xxl">
+			<text class="icon-emoji text-xxl text-grey"></text>
+			<view class="margin-top-s text-l text-grey">此功能需要登录后使用</view>
+			<view class="margin-top-s text-grey">请先登录您的微信账号</view>
+			<button class="btn-base btn-project margin-top-l" bindtap="bindGoLogin">立即登录</button>
+		</view>
+	</view>
+
 	<view wx:if="{{isLoad}}" class="main padding-project">
 
 		<view class="article-box">
@@ -13,6 +23,18 @@
 					<view class="title text-cut" style="padding-right:0"><text class="icon-calendar margin-right-xxs"></text>{{meet.dayDesc}} <text class="tag mid bg-orange light round margin-right">更改时段</text></view>
 				</view>
 
+			</view>
+
+			<!-- 座位信息显示 -->
+			<view wx:if="{{selectedSeats.length > 0}}" class="form-box card-project shadow-project margin-top">
+				<view class="form-group">
+					<view class="title">已选座位</view>
+				</view>
+				<view class="form-group">
+					<view class="seat-info" style="display: flex; flex-wrap: wrap; gap: 8px;">
+						<text wx:for="{{selectedSeats}}" wx:key="*this" class="seat-tag" style="background-color: #007aff; color: white; padding: 4px 8px; border-radius: 4px; font-size: 12px;">{{item + 1}}号</text>
+					</view>
+				</view>
 			</view>
 
 			<!-- form content begin -->

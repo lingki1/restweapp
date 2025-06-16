@@ -204,7 +204,7 @@ class AdminNewsController extends BaseAdminController {
 		await contentCheck.checkTextMultiAdmin(input);
 
 		let service = new AdminNewsService();
-		let result = service.editNews(input);
+		let result = await service.editNews(input);
 
 		this.log('修改了文章《' + input.title + '》', LogModel.TYPE.NEWS);
 

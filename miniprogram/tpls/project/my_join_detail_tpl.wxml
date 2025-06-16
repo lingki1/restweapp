@@ -53,6 +53,16 @@
 					<view class="info margin-bottom-s">
 						<view class="center text-bold">预约信息</view>
 					</view>
+					
+					<!-- 座位信息 -->
+					<view class="info" wx:if="{{join.JOIN_SEATS && join.JOIN_SEATS.length > 0}}">
+						<view class="title">预约座位：</view>
+						<view class="content">
+							<text wx:for="{{join.JOIN_SEATS}}" wx:key="*this" class="tag small bg-blue light margin-right-xs">{{item + 1}}号</text>
+						</view>
+					</view>
+					
+					<!-- 用户填写信息 -->
 					<view class="info" wx:for="{{join.JOIN_FORMS}}" wx:key="key">
 						<view class="title">{{item.title}}：</view>
 						<view class="content">{{item.val}}</view>

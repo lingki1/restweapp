@@ -98,6 +98,61 @@ class PassportBiz extends BaseBiz {
 		cacheHelper.remove(this.CACHE_USER);
 	}
 
+	/**
+	 * 检查用户是否已登录
+	 * @returns {Object|null} 用户信息或null
+	 */
+	static getUser() {
+		return cacheHelper.get(this.CACHE_USER);
+	}
+
+	/**
+	 * 检查用户是否已登录，如果未登录则跳转到登录页面
+	 * @param {Object} that 页面实例
+	 * @param {string} redirectUrl 登录成功后的跳转地址
+	 * @returns {boolean} 是否已登录
+	 */
+	static checkLogin(that, redirectUrl = '') {
+		const user = this.getUser();
+		if (!user || !user.userId) {
+			// 未登录，显示登录提示
+			wx.showModal({
+				title: '需要登录',
+				content: '此功能需要登录后才能使用，是否立即登录？',
+				confirmText: '立即登录',
+				cancelText: '取消',
+				success: (res) => {
+					if (res.confirm) {
+						// 跳转到个人中心进行登录
+						wx.navigateTo({
+							url: '/projects/A00/my/index/my_index'
+						});
+					}
+				}
+			});
+			return false;
+		}
+		return true;
+	}
+
+	/**
+	 * 强制登录检查，如果未登录则阻止页面加载
+	 * @param {Object} that 页面实例
+	 * @param {Function} callback 登录成功后的回调
+	 */
+	static requireLogin(that, callback) {
+		const user = this.getUser();
+		if (!user || !user.userId) {
+			that.setData({
+				isLoad: null,
+				needLogin: true
+			});
+			return false;
+		}
+		if (callback) callback(user);
+		return true;
+	}
+
 }
 
 module.exports = PassportBiz;

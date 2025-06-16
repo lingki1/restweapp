@@ -28,21 +28,9 @@ MeetModel.DB_STRUCTURE = {
 
 	// MEET_DAYS_SET: //**** 映射到day表
 	MEET_DAYS: 'array|true|default=[]|comment=最近一次修改保存的可用日期',
-  
-	MEET_TYPE_ID: 'string|true|comment=分类编号',
-	MEET_TYPE_NAME: 'string|true|comment=分类冗余', 
-
-	MEET_IS_SHOW_LIMIT: 'int|true|default=1|comment=是否显示可预约人数',
-
-	MEET_STYLE_SET: 'object|true|default={}|comment=样式设置',
-	/*{ 
-		desc: 'string|false|comment=简介',
-		pic:' string|false|default=[]|comment=封面图cloudId]'
-	}
-	*/
+	MEET_SEAT_COUNT: 'int|true|default=0|comment=总座位数',
 
 	MEET_FORM_SET: 'array|true|default=[]|comment=表单字段设置',
-
 
 	MEET_STATUS: 'int|true|default=1|comment=状态 0=未启用,1=使用中,9=停止预约,10=已关闭',
 	MEET_ORDER: 'int|true|default=9999',

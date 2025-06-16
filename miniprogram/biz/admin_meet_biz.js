@@ -29,32 +29,6 @@ const TIME_NODE = {
 
 class AdminMeetBiz extends BaseBiz {
 
-	/** 取得分类 */
-	static async getTypeList() {
-		let skin = pageHelper.getSkin();
-
-		let typeList = dataHelper.getSelectOptions(skin.MEET_TYPE);
-		let arr = [];
-		for (let k in typeList) {
-			arr.push({
-				label: typeList[k].label,
-				type: 'typeId',
-				val: typeList[k].val, //for options
-				value: typeList[k].val, //for list
-			})
-		}
-		return arr;
-	}
-
-	static getTypeName(typeId) {
-		let skin = pageHelper.getSkin();
-		let typeList = dataHelper.getSelectOptions(skin.MEET_TYPE);
-
-		for (let k in typeList) {
-			if (typeList[k].val == typeId) return typeList[k].label;
-		}
-		return '';
-	}
 
 	// 计算剩余天数
 	static getLeaveDay(days) {
@@ -402,24 +376,13 @@ class AdminMeetBiz extends BaseBiz {
 		return {
 
 			// 选项数据  
-			typeIdOptions: await AdminMeetBiz.getTypeList(),
 			beginDaySetOptions: AdminMeetBiz.getBeginDaySetOptions(),
 
 			// 表单数据  
 			formTitle: '',
-			formTypeId: '',
 			formContent: '',
 			formOrder: 9999,
-			formStyleSet: {
-				pic: '',
-				desc: ''
-			},
-
 			formDaysSet: [], // 时间设置 
-
-
-			formIsShowLimit: 1, //是否显示可预约数量
-
 			formFormSet: formSetHelper.defaultForm(skin.DEFAULT_FORMS)
 		}
 
@@ -509,12 +472,9 @@ class AdminMeetBiz extends BaseBiz {
 /** 表单校验  本地 */
 AdminMeetBiz.CHECK_FORM = {
 	title: 'formTitle|must|string|min:2|max:50|name=标题',
-	typeId: 'formTypeId|must|id|name=分类',
+	seats: 'formSeats|must|int|min:1|max:9999|name=座位数',
 	order: 'formOrder|must|int|min:1|max:9999|name=排序号',
-
 	daysSet: 'formDaysSet|must|array|name=预约时间设置',
-	isShowLimit: 'formIsShowLimit|must|int|in:0,1|name=是否显示可预约人数',
-
 	formSet: 'formFormSet|must|array|name=用户资料设置',
 };
 

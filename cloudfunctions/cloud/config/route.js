@@ -23,6 +23,7 @@ module.exports = {
 	'meet/detail_for_join': 'meet_controller@detailForJoin',
 	'meet/before_join': 'meet_controller@beforeJoin',
 	'meet/join': 'meet_controller@join',
+	'meet/get_reserved_seats': 'meet_controller@getReservedSeats',
 
 	'my/my_join_list': 'meet_controller@getMyJoinList',
 	'my/my_join_cancel': 'meet_controller@cancelMyJoin',

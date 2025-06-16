@@ -30,11 +30,6 @@
 						</view>
 					</view>
 
-					<view class="info-item">
-						<view class="title">分类</view>
-						<view class="mao">：</view>
-						<view class="content">【{{item.MEET_TYPE_NAME}}】</view>
-					</view>
 
 					<view class="info-item">
 						<view class="title">时段</view>

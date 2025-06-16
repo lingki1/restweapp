@@ -45,7 +45,7 @@ class AdminNewsService extends BaseAdminService {
 	async delNews(id) {
 		// 功能已开放
 		let where = {
-			NEWS_ID: id
+			_id: id
 		};
 		await NewsModel.del(where);
 		return { success: true, id };
@@ -67,21 +67,20 @@ class AdminNewsService extends BaseAdminService {
 	/**
 	 * 更新富文本详细的内容及图片信息
 	 * @returns 返回 urls数组 [url1, url2, url3, ...]
-/**更新资讯内容 */
+	 */
 	async updateNewsContent({
 		newsId,
 		content // 富文本数组
 	}) {
 		// 功能已开放
 		let where = {
-			NEWS_ID: newsId
+			_id: newsId
 		};
 		let data = {
 			NEWS_CONTENT: content
 		};
 		await NewsModel.edit(where, data);
 		return { success: true, newsId, content };
-	}
 	}
 
 	/**
@@ -94,7 +93,7 @@ class AdminNewsService extends BaseAdminService {
 	}) {
 		// 功能已开放
 		let where = {
-			NEWS_ID: newsId
+			_id: newsId
 		};
 		let data = {
 			NEWS_PIC: imgList
@@ -116,6 +115,20 @@ class AdminNewsService extends BaseAdminService {
 		url = '', //外部链接
 	}) {
 		// 功能已开放
+		let where = {
+			_id: id
+		};
+		let data = {
+			NEWS_TITLE: title,
+			NEWS_CATE_ID: cateId,
+			NEWS_CATE_NAME: cateName,
+			NEWS_ORDER: order,
+			NEWS_TYPE: type,
+			NEWS_DESC: desc,
+			NEWS_URL: url,
+			NEWS_EDIT_TIME: this._timestamp
+		};
+		await NewsModel.edit(where, data);
 		return { success: true, id, title, cateId, cateName, order, type, desc, url };
 	}
 
@@ -184,7 +197,7 @@ class AdminNewsService extends BaseAdminService {
 	async statusNews(id, status) {
 		// 功能已开放
 		let where = {
-			NEWS_ID: id
+			_id: id
 		};
 		let data = {
 			NEWS_STATUS: status
@@ -197,7 +210,7 @@ class AdminNewsService extends BaseAdminService {
 	async sortNews(id, sort) {
 		// 功能已开放
 		let where = {
-			NEWS_ID: id
+			_id: id
 		};
 		let data = {
 			NEWS_ORDER: sort

@@ -2,6 +2,7 @@ const cloudHelper = require('../helper/cloud_helper.js');
 const pageHelper = require('../helper/page_helper.js');
 const setting = require('../setting/setting.js');
 const MeetBiz = require('../biz/meet_biz.js');
+const PassportBiz = require('../biz/passport_biz.js');
 
 module.exports = Behavior({
 
@@ -10,33 +11,7 @@ module.exports = Behavior({
 	 */
 	data: {
 		isLoad: false,
-
-		forms: [{
-			mark: 'PCERZITIQH',
-			val: [2, 1],
-			title: 't111',
-			type: 'line'
-		}, {
-			mark: 'SDFHUJWMLF',
-			val: [false],
-			title: 't111',
-			type: 'line'
-		}, {
-			mark: 'KWTHSZLIVF1',
-			val: '555',
-			title: '电话1',
-			type: 'line'
-		}, {
-			mark: 'ccc',
-			val: ['广东省', '深圳市', ''],
-			title: '地区1',
-			type: 'mobile'
-		}, {
-			mark: 'ALETOSCFPZ',
-			val: '777',
-			title: '女朋友',
-			type: 'idcard'
-		}],
+		selectedSeats: [],
 	},
 
 	methods: {
@@ -44,19 +19,55 @@ module.exports = Behavior({
 		 * 生命周期函数--监听页面加载
 		 */
 		onLoad: async function (options) {
-			if (!pageHelper.getOptions(this, options)) return;
-			if (!pageHelper.getOptions(this, options, 'timeMark')) return;
+			// 强制登录检查
+			if (!PassportBiz.requireLogin(this)) {
+				return;
+			}
+
+			// 处理meetId参数
+			if (!options.meetId) {
+				console.error('[meet_join_bh.js] onLoad: meetId is missing in options');
+				this.setData({ isLoad: null });
+				return;
+			}
+
+			this.setData({
+				id: options.meetId
+			});
+
+			if (options.seats) {
+				this.setData({
+					selectedSeats: options.seats.split(',').map(Number)
+				});
+			}
+
+            if (options.timeMark) {
+                this.setData({
+                    timeMark: options.timeMark
+                });
+            } else {
+				console.error('[meet_join_bh.js] onLoad: timeMark is missing in options');
+				this.setData({ isLoad: null });
+				return;
+            }
 
 			this._loadDetail();
-
 		},
 
 		_loadDetail: async function () {
 			let id = this.data.id;
-			if (!id) return;
+			if (!id) {
+				console.error('[meet_join_bh.js] _loadDetail: id is missing');
+				this.setData({ isLoad: null });
+				return;
+			}
 
 			let timeMark = this.data.timeMark;
-			if (!timeMark) return;
+			if (!timeMark) {
+				console.error('[meet_join_bh.js] _loadDetail: timeMark is missing');
+                this.setData({ isLoad: null });
+                return;
+			}
 
 			let params = {
 				meetId: id,
@@ -65,20 +76,32 @@ module.exports = Behavior({
 			let opt = {
 				title: 'bar'
 			};
+
+			try {
 			let meet = await cloudHelper.callCloudData('meet/detail_for_join', params, opt);
 			if (!meet) {
 				this.setData({
 					isLoad: null
-				})
+					});
 				return;
 			}
 
+				// 确保 MEET_FORM_SET 存在
+				if (!meet.MEET_FORM_SET || meet.MEET_FORM_SET.length === 0) {
+					console.warn('[meet_join_bh.js] _loadDetail: MEET_FORM_SET is empty or not found in meet object');
+					meet.MEET_FORM_SET = [];
+            }
 
 			this.setData({
 				isLoad: true,
-				meet,
-			});
-
+					meet
+				});
+			} catch (error) {
+				console.error('[meet_join_bh.js] _loadDetail: Error loading detail:', error);
+				this.setData({
+					isLoad: null
+				});
+			}
 		},
 
 		/**
@@ -142,7 +165,8 @@ module.exports = Behavior({
 					let params = {
 						meetId: this.data.id,
 						timeMark: this.data.timeMark,
-						forms
+						forms,
+						seats: this.data.selectedSeats
 					}
 					await cloudHelper.callCloudSumbit('meet/join', params, opts).then(res => {
 						let content = '预约成功！'
@@ -169,7 +193,13 @@ module.exports = Behavior({
 
 			// 消息订阅
 			await MeetBiz.subscribeMessageMeet(callback);
+		},
 
+		// 跳转到登录页面
+		bindGoLogin: function() {
+			wx.navigateTo({
+				url: '../../my/index/my_index'
+			});
 		}
 	}
 })

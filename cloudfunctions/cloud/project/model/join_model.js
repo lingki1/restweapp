@@ -45,6 +45,8 @@ JoinModel.DB_STRUCTURE = {
 	   val:
 	*/
 
+	JOIN_SEATS: 'array|true|default=[]|comment=预约座位号',
+
 	JOIN_STATUS: 'int|true|default=1|comment=状态 1=预约成功,10=已取消, 99=系统取消',
 
 	JOIN_REASON: 'string|false|comment=审核拒绝或者取消理由',

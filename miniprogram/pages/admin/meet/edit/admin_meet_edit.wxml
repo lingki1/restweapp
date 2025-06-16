@@ -10,25 +10,12 @@
 			</view>
 			<view wx:if="{{formTitleFocus}}" class="hint-desc error">{{formTitleFocus}}</view>
 
-			<view class="form-group arrow">
-				<view class="title must">分类</view>
-				<cmpt-picker id="cate-picker" sourceData="{{typeIdOptions}}" bind:select="url" data-type="picker" data-item="formTypeId" item="{{formTypeId}}"> </cmpt-picker>
-			</view>
-			<view wx:if="{{formTypeIdFocus}}" class="hint-desc error">{{formTypeIdFocus}}</view>
 
-			<view id="formStyleSet" class="form-group arrow" bindtap="url" data-url="../cover/admin_meet_cover">
-				<view class="title must">封面设置<text class="text-grey text-normal margin-left-xs">(必填)</text></view>
-				<view wx:if="{{formStyleSet.pic}}" class="form-text"></view>
-				<view wx:else class="form-text text-orange">封面图片未设置</view>
+			<view class="form-group">
+				<view class="title must">座位数</view>
+				<input placeholder="请输入座位数" type="digit" placeholder-class="phc" model:value="{{formSeats}}" maxlength="4"></input>
 			</view>
-			<view wx:if="{{formStyleSetFocus}}" class="hint-desc error">{{formStyleSetFocus}}</view>
-
-			<view class="form-group arrow" bindtap="url" data-url="../content/admin_meet_content?id={{id}}">
-				<view class="title must">详细介绍<text class="text-grey text-normal margin-left-xs">(必填)</text></view>
-				<view wx:if="{{contentDesc==='未填写'}}" class="form-text text-orange">详细介绍未填写</view>
-				<view wx:else class="form-text">{{contentDesc}}</view>
-			</view>
-			<view wx:if="{{formContentFocus}}" class="hint-desc error">{{formContentFocus}}</view>
+			<view wx:if="{{formSeatsFocus}}" class="hint-desc error">{{formSeatsFocus}}</view>
 
 			<view class="form-group">
 				<view class="title must" bindtap="url" data-type="hint" data-url="用户看到的预约列表排序，小的先显示">排序号<text class="icon-question margin-left-xxs text-normal"></text></view>
@@ -46,12 +33,6 @@
 			</view>
 			<view wx:if="{{formDaysSetFocus}}" class="hint-desc error">{{formDaysSetFocus}}</view>
 
-
-			<view class="form-group">
-				<view class="title must">是否显示可预约人数</view>
-				<cmpt-picker mark="isShowLimit" style="flex:1" model:item="{{formIsShowLimit}}" sourceDataStr="0=不显示给用户,1=显示给用户" />
-			</view>
-			<view wx:if="{{formIsShowLimitFocus}}" class="hint-desc error">{{formIsShowLimitFocus}}</view>
 
 
 		</view>
