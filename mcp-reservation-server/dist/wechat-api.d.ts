@@ -1,4 +1,4 @@
-import { WeChatConfig, ReservationRecord } from './types.js';
+import { WeChatConfig, ReservationRecord, MeetRecord } from './types.js';
 export declare class WeChatAPI {
     private config;
     private accessToken?;
@@ -110,21 +110,61 @@ export declare class WeChatAPI {
      */
     private validateMeetAndTime;
     /**
-     * 创建新的预约记录 - 支持Token失效自动重试
+     * 生成唯一的时间段标识
      */
-    createReservation(params: {
-        name: string;
-        mobile: string;
-        seatNumber?: string;
-        day: string;
-        timeStart: string;
-        timeEnd: string;
-        timeMark: string;
-        meetId: string;
-        meetTitle: string;
+    private generateTimeMark;
+    /**
+     * 生成唯一的表单字段标识
+     */
+    private generateFieldMark;
+    /**
+     * 创建预约窗口（完善版）
+     */
+    createMeetWindow(params: {
+        title: string;
+        seatCount: number;
+        order?: number;
+        content?: string;
+        adminId?: string;
+        meetDays: {
+            day: string;
+            times: {
+                start: string;
+                end: string;
+                limit?: number;
+                mark?: string;
+            }[];
+        }[];
+        formFields?: {
+            title: string;
+            type: string;
+            required: boolean;
+            options?: string[];
+        }[];
     }, retryCount?: number): Promise<{
         success: boolean;
-        joinId?: string;
+        meetId?: string;
     }>;
+    /**
+     * 查询预约窗口
+     */
+    queryMeetWindows(params: {
+        status?: string;
+        limit?: number;
+    }): Promise<MeetRecord[]>;
+    /**
+     * 更新预约窗口
+     */
+    updateMeetWindow(params: {
+        meetId: string;
+        title?: string;
+        seatCount?: number;
+        content?: string;
+        status?: string;
+    }, retryCount?: number): Promise<boolean>;
+    /**
+     * 删除预约窗口
+     */
+    deleteMeetWindow(meetId: string, retryCount?: number): Promise<boolean>;
 }
 //# sourceMappingURL=wechat-api.d.ts.map

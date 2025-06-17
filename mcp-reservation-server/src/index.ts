@@ -22,10 +22,16 @@ import {
   DeleteReservationArgs,
   DeleteByMobileArgs,
   DeleteByNameArgs,
-  CreateReservationArgs,
+  CreateMeetWindowArgs,
+  UpdateMeetWindowArgs,
+  DeleteMeetWindowArgs,
+  QueryMeetWindowsArgs,
   getStatusText,
+  getMeetStatusText,
+  formatSeatNumbers,
   ReservationStatus,
   ReservationRecord,
+  MeetRecord,
 } from './types.js';
 
 // 服务器配置
@@ -55,7 +61,7 @@ const server = new Server(
   }
 );
 
-// 格式化预约记录显示
+// 格式化预约记录显示（更新座位号显示逻辑）
 function formatReservationRecord(record: ReservationRecord, index?: number): string {
   const statusText = getStatusText(record.JOIN_STATUS);
   // 微信API返回的时间戳已经是毫秒格式，不需要乘以1000
@@ -98,12 +104,47 @@ function formatReservationRecord(record: ReservationRecord, index?: number): str
   result += `   📊 状态: ${statusText}\n`;
   result += `   📝 创建时间: ${addTime}\n`;
   
+  // 使用新的座位号格式化函数：数据库中0代表座位1
   if (record.JOIN_SEATS && record.JOIN_SEATS.length > 0) {
-    result += `   🪑 座位: ${record.JOIN_SEATS.join(', ')}\n`;
+    result += `   🪑 座位: ${formatSeatNumbers(record.JOIN_SEATS)}\n`;
   }
   
   if (record.JOIN_REASON) {
     result += `   💬 备注: ${record.JOIN_REASON}\n`;
+  }
+  
+  return result;
+}
+
+// 格式化预约窗口显示
+function formatMeetWindowRecord(record: MeetRecord, index?: number): string {
+  const statusText = getMeetStatusText(record.MEET_STATUS);
+  const addTime = new Date(record.MEET_ADD_TIME).toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit', 
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit'
+  });
+  
+  let result = '';
+  if (index !== undefined) {
+    result += `${index + 1}. `;
+  }
+  
+  result += `${record.MEET_TITLE}\n`;
+  result += `   🆔 窗口ID: ${record.MEET_ID}\n`;
+  result += `   🔑 数据库ID: ${record._id}\n`;
+  result += `   👤 管理员ID: ${record.MEET_ADMIN_ID}\n`;
+  result += `   🪑 座位数: ${record.MEET_SEAT_COUNT}\n`;
+  result += `   📊 状态: ${statusText}\n`;
+  result += `   📅 可用日期: ${record.MEET_DAYS?.length || 0} 天\n`;
+  result += `   📝 创建时间: ${addTime}\n`;
+  
+  if (record.MEET_CONTENT && record.MEET_CONTENT.length > 0) {
+    const content = record.MEET_CONTENT.map((c: any) => c.content || c.text).join(', ');
+    result += `   📄 描述: ${content}\n`;
   }
   
   return result;
@@ -263,67 +304,177 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
-        name: 'get_available_meets',
-        description: '获取所有可用的预约窗口',
-        inputSchema: {
-          type: 'object',
-          properties: {},
-        },
-      },
-      {
-        name: 'get_available_time_slots',
-        description: '获取指定预约窗口在指定日期的可用时间段',
+        name: 'create_meet_window',
+        description: '创建新的预约窗口，包含时间段设置和用户填写资料设置',
         inputSchema: {
           type: 'object',
           properties: {
-            meet_id: {
+            title: {
               type: 'string',
-              description: '预约窗口ID',
-            },
-            day: {
-              type: 'string',
-              description: '预约日期（YYYY-MM-DD格式）',
-              pattern: '^\\d{4}-\\d{2}-\\d{2}$',
-            },
-          },
-          required: ['meet_id', 'day'],
-        },
-      },
-      {
-        name: 'create_reservation',
-        description: '创建新的预约记录（需要先查看可用的预约窗口和时间段）',
-        inputSchema: {
-          type: 'object',
-          properties: {
-            name: {
-              type: 'string',
-              description: '预约人姓名',
+              description: '预约窗口标题',
               minLength: 1,
             },
-            mobile: {
-              type: 'string',
-              description: '手机号（11位数字）',
-              pattern: '^[0-9]{11}$',
+            seat_count: {
+              type: 'number',
+              description: '座位数量',
+              minimum: 1,
             },
-            seat_number: {
-              type: 'string',
-              description: '座位号（可选）',
+            order: {
+              type: 'number',
+              description: '排序号（默认9999）',
+              default: 9999,
             },
-            day: {
+            content: {
               type: 'string',
-              description: '预约日期（YYYY-MM-DD格式）',
-              pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+              description: '预约窗口描述（可选）',
             },
-            time_mark: {
+            admin_id: {
               type: 'string',
-              description: '时间段标识（从get_available_time_slots获取）',
+              description: '管理员ID（可选）',
             },
-            meet_id: {
-              type: 'string',
-              description: '预约窗口ID（从get_available_meets获取）',
+            meet_days: {
+              type: 'array',
+              description: '预约日期和时间段设置',
+              items: {
+                type: 'object',
+                properties: {
+                  day: {
+                    type: 'string',
+                    description: '预约日期（YYYY-MM-DD格式）',
+                    pattern: '^\\d{4}-\\d{2}-\\d{2}$',
+                  },
+                  times: {
+                    type: 'array',
+                    description: '该日期的时间段',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        start: {
+                          type: 'string',
+                          description: '开始时间（HH:MM格式）',
+                          pattern: '^\\d{2}:\\d{2}$',
+                        },
+                        end: {
+                          type: 'string',
+                          description: '结束时间（HH:MM格式）',
+                          pattern: '^\\d{2}:\\d{2}$',
+                        },
+                        limit: {
+                          type: 'number',
+                          description: '该时间段人数限制（可选，默认等于座位数）',
+                          minimum: 1,
+                        },
+                      },
+                      required: ['start', 'end'],
+                    },
+                    minItems: 1,
+                  },
+                },
+                required: ['day', 'times'],
+              },
+              minItems: 1,
+            },
+            form_fields: {
+              type: 'array',
+              description: '用户填写资料设置（可选，默认为姓名和手机）',
+              items: {
+                type: 'object',
+                properties: {
+                  title: {
+                    type: 'string',
+                    description: '字段标题',
+                    minLength: 1,
+                  },
+                  type: {
+                    type: 'string',
+                    description: '字段类型',
+                    enum: ['line', 'mobile', 'select', 'textarea'],
+                  },
+                  required: {
+                    type: 'boolean',
+                    description: '是否必填',
+                    default: true,
+                  },
+                  options: {
+                    type: 'array',
+                    description: '选项（适用于select类型）',
+                    items: {
+                      type: 'string',
+                    },
+                  },
+                },
+                required: ['title', 'type'],
+              },
             },
           },
-          required: ['name', 'mobile', 'day', 'time_mark', 'meet_id'],
+          required: ['title', 'seat_count', 'meet_days'],
+        },
+      },
+      {
+        name: 'query_meet_windows',
+        description: '查询预约窗口',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            status: {
+              type: 'string',
+              description: '窗口状态：0=未启用，1=使用中，9=停止预约，10=已关闭（可选）',
+              enum: ["0", "1", "9", "10"],
+            },
+            limit: {
+              type: 'number',
+              description: '返回记录数限制（默认20）',
+              default: 20,
+              minimum: 1,
+              maximum: 100,
+            },
+          },
+        },
+      },
+      {
+        name: 'update_meet_window',
+        description: '更新预约窗口',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            meet_id: {
+              type: 'string',
+              description: '预约窗口的数据库ID（_id字段）',
+            },
+            title: {
+              type: 'string',
+              description: '新的标题（可选）',
+            },
+            seat_count: {
+              type: 'number',
+              description: '新的座位数量（可选）',
+              minimum: 1,
+            },
+            content: {
+              type: 'string',
+              description: '新的描述（可选）',
+            },
+            status: {
+              type: 'string',
+              description: '新的状态：0=未启用，1=使用中，9=停止预约，10=已关闭（可选）',
+              enum: ["0", "1", "9", "10"],
+            },
+          },
+          required: ['meet_id'],
+        },
+      },
+      {
+        name: 'delete_meet_window',
+        description: '删除预约窗口（谨慎操作）',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            meet_id: {
+              type: 'string',
+              description: '预约窗口的数据库ID（_id字段）',
+            },
+          },
+          required: ['meet_id'],
         },
       },
       // 保留原有的工具
@@ -531,142 +682,105 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         };
       }
 
-      case 'get_available_meets': {
-        const meets = await wechatAPI.getAvailableMeets();
-        
-        if (meets.length === 0) {
-          return {
-            content: [{
-              type: 'text',
-              text: '❌ 当前没有可用的预约窗口，请联系管理员创建预约窗口。'
-            }],
-          };
-        }
-
-        let result = `📋 可用的预约窗口 (${meets.length} 个):\n\n`;
-        meets.forEach((meet, index) => {
-          result += `${index + 1}. **${meet.title}**\n`;
-          result += `   - 窗口ID: \`${meet.id}\`\n`;
-          result += `   - 座位数: ${meet.seatCount}\n`;
-          result += `   - 可预约日期: ${meet.availableDays.length} 天\n`;
-          if (meet.availableDays.length > 0) {
-            const firstFewDays = meet.availableDays.slice(0, 3).map((d: any) => d.day).join(', ');
-            result += `   - 示例日期: ${firstFewDays}${meet.availableDays.length > 3 ? '...' : ''}\n`;
-          }
-          result += '\n';
-        });
-        
-        result += '💡 **使用提示:** 复制窗口ID，然后使用 get_available_time_slots 查看具体时间段';
-
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'get_available_time_slots': {
-        // 简单的参数验证
-        if (!args || !args.meet_id || typeof args.meet_id !== 'string') {
-          throw new Error('meet_id 参数是必需的');
-        }
-        if (!args.day || typeof args.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(args.day)) {
-          throw new Error('day 参数必须是 YYYY-MM-DD 格式');
-        }
-        const params = { meet_id: args.meet_id as string, day: args.day as string };
-        
-        const timeSlots = await wechatAPI.getAvailableTimeSlots(params.meet_id, params.day);
-        
-        if (timeSlots.length === 0) {
-          return {
-            content: [{
-              type: 'text',
-              text: `❌ ${params.day} 没有可用的时间段，请选择其他日期或联系管理员。`
-            }],
-          };
-        }
-
-        let result = `⏰ ${params.day} 可用时间段 (${timeSlots.length} 个):\n\n`;
-        timeSlots.forEach((slot, index) => {
-          result += `${index + 1}. **${slot.start} - ${slot.end}**\n`;
-          result += `   - 时间段标识: \`${slot.mark}\`\n`;
-          result += `   - 限制人数: ${slot.limit || '无限制'}\n`;
-          result += `   - 已预约: ${slot.stat?.succCnt || 0} 人\n`;
-          result += '\n';
-        });
-        
-        result += '💡 **使用提示:** 复制时间段标识，然后使用 create_reservation 创建预约';
-
-        return {
-          content: [{ type: 'text', text: result }],
-        };
-      }
-
-      case 'create_reservation': {
-        // 简单的参数验证
-        if (!args || !args.name || typeof args.name !== 'string') {
-          throw new Error('name 参数是必需的');
-        }
-        if (!args.mobile || typeof args.mobile !== 'string' || !/^[0-9]{11}$/.test(args.mobile)) {
-          throw new Error('mobile 参数必须是11位数字');
-        }
-        if (!args.day || typeof args.day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(args.day)) {
-          throw new Error('day 参数必须是 YYYY-MM-DD 格式');
-        }
-        if (!args.time_mark || typeof args.time_mark !== 'string') {
-          throw new Error('time_mark 参数是必需的');
-        }
-        if (!args.meet_id || typeof args.meet_id !== 'string') {
-          throw new Error('meet_id 参数是必需的');
-        }
-        
-        const params = {
-          name: args.name as string,
-          mobile: args.mobile as string,
-          seat_number: args.seat_number as string | undefined,
-          day: args.day as string,
-          time_mark: args.time_mark as string,
-          meet_id: args.meet_id as string,
-        };
-        
-        // 我们需要获取时间信息来创建预约
-        const timeSlots = await wechatAPI.getAvailableTimeSlots(params.meet_id, params.day);
-        const timeSlot = timeSlots.find(slot => slot.mark === params.time_mark);
-        
-        if (!timeSlot) {
-          return {
-            content: [{
-              type: 'text',
-              text: `❌ 时间段无效！请先使用 get_available_time_slots 查看可用时间段。`
-            }],
-          };
-        }
-        
-        const result = await wechatAPI.createReservation({
-          name: params.name,
-          mobile: params.mobile,
-          seatNumber: params.seat_number,
-          day: params.day,
-          timeStart: timeSlot.start,
-          timeEnd: timeSlot.end,
-          timeMark: params.time_mark,
-          meetId: params.meet_id,
-          meetTitle: '', // 会在API中自动获取
+      case 'create_meet_window': {
+        const params = CreateMeetWindowArgs.parse(args);
+        const result = await wechatAPI.createMeetWindow({
+          title: params.title,
+          seatCount: params.seat_count,
+          order: params.order,
+          content: params.content,
+          adminId: params.admin_id,
+          meetDays: params.meet_days,
+          formFields: params.form_fields,
         });
 
+        let resultText = '';
         if (result.success) {
-          return {
-            content: [{
-              type: 'text',
-              text: `✅ 预约创建成功！\n\n📋 **预约详情:**\n- 预约ID: ${result.joinId}\n- 姓名: ${params.name}\n- 手机: ${params.mobile}\n- 日期: ${params.day}\n- 时间: ${timeSlot.start}-${timeSlot.end}\n- 座位: ${params.seat_number || '未指定'}\n\n🎉 预约已生效，请按时参加！`
-            }],
-          };
+          resultText = `✅ 预约窗口创建成功！\n\n🆔 窗口ID: ${result.meetId}\n📝 标题: ${params.title}\n🪑 座位数: ${params.seat_count}\n🔢 排序号: ${params.order || 9999}\n📄 描述: ${params.content || '无描述'}\n👤 管理员ID: ${params.admin_id || '未指定'}`;
+          
+          // 显示预约日期和时间段信息
+          resultText += `\n\n📅 可预约日期 (${params.meet_days.length} 天):`;
+          params.meet_days.forEach((day, dayIndex) => {
+            resultText += `\n  ${dayIndex + 1}. ${day.day} (${day.times.length} 个时间段)`;
+            day.times.forEach((time, timeIndex) => {
+              resultText += `\n     ${timeIndex + 1}) ${time.start}-${time.end}${time.limit ? ` (限${time.limit}人)` : ''}`;
+            });
+          });
+          
+          // 显示表单字段信息
+          const formCount = params.form_fields?.length || 2;
+          resultText += `\n\n📋 用户填写字段 (${formCount} 个):`;
+          if (params.form_fields && params.form_fields.length > 0) {
+            params.form_fields.forEach((field, index) => {
+              resultText += `\n  ${index + 1}. ${field.title} (${field.type}${field.required ? ', 必填' : ', 可选'})`;
+              if (field.options && field.options.length > 0) {
+                resultText += ` - 选项: ${field.options.join(', ')}`;
+              }
+            });
+          } else {
+            resultText += `\n  1. 姓名 (line, 必填)\n  2. 手机 (mobile, 必填)`;
+          }
         } else {
-          return {
-            content: [{
-              type: 'text',
-              text: `❌ 预约创建失败，请稍后重试`
-            }],
-          };
+          resultText = `❌ 预约窗口创建失败！\n\n可能原因：\n- 网络连接问题\n- 参数验证失败`;
         }
+
+        return {
+          content: [{ type: 'text', text: resultText }],
+        };
+      }
+
+      case 'query_meet_windows': {
+        const params = QueryMeetWindowsArgs.parse(args);
+        const records = await wechatAPI.queryMeetWindows({
+          status: params.status,
+          limit: params.limit,
+        });
+
+        let result = `📋 查询到 ${records.length} 个预约窗口\n\n`;
+        
+        if (records.length === 0) {
+          result += '暂无符合条件的预约窗口';
+        } else {
+          records.forEach((record, index) => {
+            result += formatMeetWindowRecord(record, index) + '\n';
+          });
+        }
+
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'update_meet_window': {
+        const params = UpdateMeetWindowArgs.parse(args);
+        const success = await wechatAPI.updateMeetWindow({
+          meetId: params.meet_id,
+          title: params.title,
+          seatCount: params.seat_count,
+          content: params.content,
+          status: params.status,
+        });
+
+        const result = success
+          ? `✅ 预约窗口更新成功！\n\n🆔 窗口ID: ${params.meet_id}${params.title ? `\n📝 新标题: ${params.title}` : ''}${params.seat_count ? `\n🪑 新座位数: ${params.seat_count}` : ''}${params.content ? `\n📄 新描述: ${params.content}` : ''}${params.status ? `\n📊 新状态: ${getMeetStatusText(params.status)}` : ''}`
+          : `❌ 预约窗口更新失败！\n\n可能原因：\n- 预约窗口不存在\n- 网络连接问题`;
+
+        return {
+          content: [{ type: 'text', text: result }],
+        };
+      }
+
+      case 'delete_meet_window': {
+        const params = DeleteMeetWindowArgs.parse(args);
+        const success = await wechatAPI.deleteMeetWindow(params.meet_id);
+
+        const result = success
+          ? `✅ 预约窗口删除成功！\n\n🆔 已删除窗口ID: ${params.meet_id}\n⚠️ 此操作不可撤销`
+          : `❌ 预约窗口删除失败！\n\n可能原因：\n- 预约窗口不存在\n- 网络连接问题`;
+
+        return {
+          content: [{ type: 'text', text: result }],
+        };
       }
 
       // 保留原有的工具处理逻辑

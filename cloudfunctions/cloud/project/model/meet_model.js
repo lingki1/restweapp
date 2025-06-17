@@ -28,7 +28,7 @@ MeetModel.DB_STRUCTURE = {
 
 	// MEET_DAYS_SET: //**** 映射到day表
 	MEET_DAYS: 'array|true|default=[]|comment=最近一次修改保存的可用日期',
-	MEET_SEAT_COUNT: 'int|true|default=0|comment=总座位数',
+	MEET_SEAT_COUNT: 'int|false|default=0|comment=总座位数(0表示不启用座位功能)',
 
 	MEET_FORM_SET: 'array|true|default=[]|comment=表单字段设置',
 

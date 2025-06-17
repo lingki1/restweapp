@@ -472,7 +472,7 @@ class AdminMeetBiz extends BaseBiz {
 /** 表单校验  本地 */
 AdminMeetBiz.CHECK_FORM = {
 	title: 'formTitle|must|string|min:2|max:50|name=标题',
-	seats: 'formSeats|must|int|min:1|max:9999|name=座位数',
+	seats: 'formSeats|int|min:0|max:9999|name=座位数',
 	order: 'formOrder|must|int|min:1|max:9999|name=排序号',
 	daysSet: 'formDaysSet|must|array|name=预约时间设置',
 	formSet: 'formFormSet|must|array|name=用户资料设置',

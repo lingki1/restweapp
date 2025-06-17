@@ -3,8 +3,9 @@ page {
 }
 
 .main {
-	padding: 0 0 20rpx;
+	padding: 0;
 	background-color: #f2f2f2 !important;
+	width: 100%;
 }
 
 .main .plan-date {
@@ -20,8 +21,10 @@ page {
 	display: flex;
 	flex-direction: column;
 	justify-content: flex-start;
-	align-items: center;
-	padding: 30rpx 20rpx;
+	align-items: stretch;
+	padding: 0;
+	margin: 0;
+	box-sizing: border-box;
 }
 
 .main .list .item {
@@ -29,7 +32,7 @@ page {
 	display: flex;
 	justify-content: space-between;
 	align-items: center;
-	height: 100rpx;
+	height: 80rpx;
 	padding: 0 30rpx 0 0;
 	background-color: #fff;
 	margin-bottom: 30rpx;
@@ -39,9 +42,8 @@ page {
 
 .main .list .item .left {
 	width: 8rpx;
-	height: 100rpx;
+	height: 80rpx;
 	margin-right: 15rpx;
-
 }
 
 .main .list .item .img {
@@ -54,20 +56,106 @@ page {
 .main .list .item .title {
 	flex: 1;
 	text-align: left;
-	font-size: 28rpx;
-	font-weight: bold;
-	color: #333;
+	font-size: 24rpx;
+	font-weight: normal;
+	color: #666;
 	margin-left: 20rpx;
 }
 
 .main .list .item .time {
 	width: 140rpx;
 	text-align: right;
-	font-size: 26rpx;
-	color: #999;
+	font-size: 32rpx;
+	font-weight: bold;
+	color: #333;
 }
 
 .main .list .no-project {
 	padding: 30rpx 30rpx;
 	font-size: 28rpx;
+	text-align: center;
+}
+
+/* 时段列表容器样式 */
+.time-slots-container {
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0;
+	margin: 0;
+}
+
+/* 时段头部样式 */
+.time-slot-header {
+	width: 100%;
+	box-sizing: border-box;
+	margin: 0;
+	padding: 15px 15px 10px;
+	background-color: #f8f8f8;
+	border-bottom: 1px solid #e0e0e0;
+}
+
+/* 时段项目样式 */
+.time-slot-item {
+	width: 100%;
+	box-sizing: border-box;
+	background-color: #fff;
+	margin: 0;
+	padding: 15px;
+	border-bottom: 1px solid #f0f0f0;
+	min-height: auto;
+}
+
+.time-slot-item:last-child {
+	border-bottom: none;
+}
+
+/* 座位网格样式 */
+.seat-grid {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-around;
+	width: 100%;
+	box-sizing: border-box;
+	padding: 0 10px;
+	margin-top: 10px;
+}
+
+/* 座位样式 */
+.seat {
+	border-radius: 8px;
+	transition: all 0.2s ease;
+	font-weight: 500;
+	min-height: 35px;
+	padding: 8px 12px;
+}
+
+.seat.selected {
+	transform: scale(1.05);
+	box-shadow: 0 2px 8px rgba(0, 122, 255, 0.3);
+}
+
+.seat.available:active {
+	transform: scale(0.95);
+}
+
+/* 按钮样式 */
+.btn-select-slot, .btn-login, .btn-cancel, .btn-submit {
+	font-size: 30rpx;
+	font-weight: 500;
+	box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+	transition: all 0.2s ease;
+	border: none;
+	outline: none;
+	padding: 12px 20px;
+	margin-top: 15px;
+}
+
+.btn-select-slot:active, .btn-login:active {
+	transform: scale(0.98);
+	opacity: 0.9;
+}
+
+.btn-cancel:active, .btn-submit:active {
+	transform: scale(0.98);
+	opacity: 0.9;
 }

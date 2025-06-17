@@ -26,6 +26,12 @@ export declare enum ReservationStatus {
     CANCELLED = 10,// 已取消
     ADMIN_CANCELLED = 99
 }
+export declare enum MeetStatus {
+    DISABLED = 0,// 未启用
+    ACTIVE = 1,// 使用中
+    STOPPED = 9,// 停止预约(可见)
+    CLOSED = 10
+}
 export interface FormField {
     title: string;
     mark: string;
@@ -47,9 +53,44 @@ export interface ReservationRecord {
     JOIN_ADD_TIME: number;
     JOIN_EDIT_TIME: number;
     JOIN_FORMS: FormField[];
-    JOIN_SEATS: string[];
+    JOIN_SEATS: number[];
     JOIN_CODE: string;
     JOIN_IS_CHECKIN?: number;
+}
+export interface TimeSlot {
+    mark: string;
+    start: string;
+    end: string;
+    limit?: number;
+    status: number;
+}
+export interface MeetDay {
+    day: string;
+    times: TimeSlot[];
+}
+export interface FormFieldSetting {
+    title: string;
+    mark: string;
+    type: string;
+    required: boolean;
+    options?: string[];
+}
+export interface MeetRecord {
+    _id: string;
+    _pid: string;
+    MEET_ID: string;
+    MEET_ADMIN_ID: string;
+    MEET_TITLE: string;
+    MEET_CONTENT: any[];
+    MEET_DAYS: MeetDay[];
+    MEET_SEAT_COUNT: number;
+    MEET_FORM_SET: FormFieldSetting[];
+    MEET_STATUS: number;
+    MEET_ORDER: number;
+    MEET_ADD_TIME: number;
+    MEET_EDIT_TIME: number;
+    MEET_ADD_IP?: string;
+    MEET_EDIT_IP?: string;
 }
 export declare const DatabaseQueryResponse: z.ZodObject<{
     errcode: z.ZodNumber;
@@ -254,36 +295,141 @@ export declare const DeleteByNameArgs: z.ZodObject<{
 }, {
     name: string;
 }>;
-export declare const CreateReservationArgs: z.ZodObject<{
-    name: z.ZodString;
-    mobile: z.ZodString;
-    seat_number: z.ZodOptional<z.ZodString>;
-    day: z.ZodString;
-    time_start: z.ZodString;
-    time_end: z.ZodString;
-    time_mark: z.ZodString;
+export declare const CreateMeetWindowArgs: z.ZodObject<{
+    title: z.ZodString;
+    seat_count: z.ZodNumber;
+    order: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+    content: z.ZodOptional<z.ZodString>;
+    admin_id: z.ZodOptional<z.ZodString>;
+    meet_days: z.ZodArray<z.ZodObject<{
+        day: z.ZodString;
+        times: z.ZodArray<z.ZodObject<{
+            start: z.ZodString;
+            end: z.ZodString;
+            limit: z.ZodOptional<z.ZodNumber>;
+            mark: z.ZodOptional<z.ZodString>;
+        }, "strip", z.ZodTypeAny, {
+            start: string;
+            end: string;
+            limit?: number | undefined;
+            mark?: string | undefined;
+        }, {
+            start: string;
+            end: string;
+            limit?: number | undefined;
+            mark?: string | undefined;
+        }>, "many">;
+    }, "strip", z.ZodTypeAny, {
+        day: string;
+        times: {
+            start: string;
+            end: string;
+            limit?: number | undefined;
+            mark?: string | undefined;
+        }[];
+    }, {
+        day: string;
+        times: {
+            start: string;
+            end: string;
+            limit?: number | undefined;
+            mark?: string | undefined;
+        }[];
+    }>, "many">;
+    form_fields: z.ZodOptional<z.ZodArray<z.ZodObject<{
+        title: z.ZodString;
+        type: z.ZodEnum<["line", "mobile", "select", "textarea"]>;
+        required: z.ZodDefault<z.ZodBoolean>;
+        options: z.ZodOptional<z.ZodArray<z.ZodString, "many">>;
+    }, "strip", z.ZodTypeAny, {
+        type: "mobile" | "line" | "select" | "textarea";
+        title: string;
+        required: boolean;
+        options?: string[] | undefined;
+    }, {
+        type: "mobile" | "line" | "select" | "textarea";
+        title: string;
+        options?: string[] | undefined;
+        required?: boolean | undefined;
+    }>, "many">>;
+}, "strip", z.ZodTypeAny, {
+    title: string;
+    seat_count: number;
+    meet_days: {
+        day: string;
+        times: {
+            start: string;
+            end: string;
+            limit?: number | undefined;
+            mark?: string | undefined;
+        }[];
+    }[];
+    order?: number | undefined;
+    content?: string | undefined;
+    admin_id?: string | undefined;
+    form_fields?: {
+        type: "mobile" | "line" | "select" | "textarea";
+        title: string;
+        required: boolean;
+        options?: string[] | undefined;
+    }[] | undefined;
+}, {
+    title: string;
+    seat_count: number;
+    meet_days: {
+        day: string;
+        times: {
+            start: string;
+            end: string;
+            limit?: number | undefined;
+            mark?: string | undefined;
+        }[];
+    }[];
+    order?: number | undefined;
+    content?: string | undefined;
+    admin_id?: string | undefined;
+    form_fields?: {
+        type: "mobile" | "line" | "select" | "textarea";
+        title: string;
+        options?: string[] | undefined;
+        required?: boolean | undefined;
+    }[] | undefined;
+}>;
+export declare const UpdateMeetWindowArgs: z.ZodObject<{
     meet_id: z.ZodString;
-    meet_title: z.ZodString;
+    title: z.ZodOptional<z.ZodString>;
+    seat_count: z.ZodOptional<z.ZodNumber>;
+    content: z.ZodOptional<z.ZodString>;
+    status: z.ZodOptional<z.ZodString>;
 }, "strip", z.ZodTypeAny, {
     meet_id: string;
-    mobile: string;
-    name: string;
-    day: string;
-    time_start: string;
-    time_end: string;
-    time_mark: string;
-    meet_title: string;
-    seat_number?: string | undefined;
+    status?: string | undefined;
+    title?: string | undefined;
+    seat_count?: number | undefined;
+    content?: string | undefined;
 }, {
     meet_id: string;
-    mobile: string;
-    name: string;
-    day: string;
-    time_start: string;
-    time_end: string;
-    time_mark: string;
-    meet_title: string;
-    seat_number?: string | undefined;
+    status?: string | undefined;
+    title?: string | undefined;
+    seat_count?: number | undefined;
+    content?: string | undefined;
+}>;
+export declare const DeleteMeetWindowArgs: z.ZodObject<{
+    meet_id: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    meet_id: string;
+}, {
+    meet_id: string;
+}>;
+export declare const QueryMeetWindowsArgs: z.ZodObject<{
+    status: z.ZodOptional<z.ZodString>;
+    limit: z.ZodOptional<z.ZodDefault<z.ZodNumber>>;
+}, "strip", z.ZodTypeAny, {
+    status?: string | undefined;
+    limit?: number | undefined;
+}, {
+    status?: string | undefined;
+    limit?: number | undefined;
 }>;
 export type QueryReservationsArgs = z.infer<typeof QueryReservationsArgs>;
 export type QueryAllReservationsArgs = z.infer<typeof QueryAllReservationsArgs>;
@@ -295,6 +441,12 @@ export type UpdateReservationTimeByNameArgs = z.infer<typeof UpdateReservationTi
 export type DeleteReservationArgs = z.infer<typeof DeleteReservationArgs>;
 export type DeleteByMobileArgs = z.infer<typeof DeleteByMobileArgs>;
 export type DeleteByNameArgs = z.infer<typeof DeleteByNameArgs>;
-export type CreateReservationArgs = z.infer<typeof CreateReservationArgs>;
+export type CreateMeetWindowArgs = z.infer<typeof CreateMeetWindowArgs>;
+export type UpdateMeetWindowArgs = z.infer<typeof UpdateMeetWindowArgs>;
+export type DeleteMeetWindowArgs = z.infer<typeof DeleteMeetWindowArgs>;
+export type QueryMeetWindowsArgs = z.infer<typeof QueryMeetWindowsArgs>;
 export declare function getStatusText(status: string | number): string;
+export declare function getMeetStatusText(status: string | number): string;
+export declare function formatSeatNumbers(seats: number[]): string;
+export declare function parseSeatNumbers(seatInput: string): number[];
 //# sourceMappingURL=types.d.ts.map

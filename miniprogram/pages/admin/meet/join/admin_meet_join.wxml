@@ -13,7 +13,11 @@
 		<!-- List Begin -->
 		<view class="join-list">
 			<view class="time-line text-grey">({{time}})</view>
-			<view wx:if="{{dataList && dataList.total }}" class="load text-grey">共有{{dataList.total}}条符合条件记录
+			<view wx:if="{{dataList && dataList.total }}" class="load text-grey">
+				共有{{dataList.total}}条符合条件记录
+				<text wx:if="{{dataList.statistics}}" class="margin-left-s text-orange">
+					总人数：{{dataList.statistics.totalPeople}}人<text wx:if="{{dataList.statistics.totalSeats > 0}}">，座位数：{{dataList.statistics.totalSeats}}个</text>
+				</text>
 				<text wx:if="{{isAllFold}}" bindtap="bindUnFoldAllTap" class="margin-left-xs icon-unfold  text-admin">全部展开</text>
 				<text wx:else bindtap="bindFoldAllTap" class="margin-left-xs icon-fold  text-admin">全部收起</text>
 			</view>
@@ -40,6 +44,14 @@
 							</view>
 							<view wx:elif="{{item.JOIN_STATUS==10}}">用户取消</view>
 							<view wx:elif="{{item.JOIN_STATUS==99}}">系统取消</view>
+						</view>
+					</view>
+
+					<view class="info-item" wx:if="{{item.seatCount > 0}}">
+						<view class="title text-admin">座位信息</view>
+						<view class="mao">：</view>
+						<view class="content">
+							<text class="text-purple">{{item.seatCount}}个座位</text><text wx:if="{{item.JOIN_SEATS && item.JOIN_SEATS.length > 0}}" class="text-grey"> (座位号: <text wx:for="{{item.JOIN_SEATS}}" wx:key="seatKey" wx:for-item="seat">{{seat + 1}}<text wx:if="{{index < item.JOIN_SEATS.length - 1}}">, </text></text>)</text>
 						</view>
 					</view>
 

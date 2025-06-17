@@ -82,13 +82,37 @@ class MeetService extends BaseService {
 			JOIN_MEET_TIME_MARK: timeMark,
 			JOIN_MEET_ID: meetId
 		};
-		let ret = await JoinModel.groupCount(whereJoin, 'JOIN_STATUS');
-
+		
+		// 获取所有预约记录，包括座位信息
+		let joins = await JoinModel.getAll(whereJoin, 'JOIN_STATUS,JOIN_SEATS');
+		
 		let stat = { //统计数据
-			succCnt: ret['JOIN_STATUS_1'] || 0, //1=预约成功,
-			cancelCnt: ret['JOIN_STATUS_10'] || 0, //10=已取消, 
-			adminCancelCnt: ret['JOIN_STATUS_99'] || 0, //99=后台取消
+			succCnt: 0, // 成功预约人数（按座位数计算）
+			cancelCnt: 0, // 用户取消人数
+			adminCancelCnt: 0, // 管理员取消人数
 		};
+		
+		// 按座位数统计人数
+		for (let join of joins) {
+			let peopleCount = 1; // 默认1人
+			
+			// 如果有座位信息，按座位数计算人数
+			if (join.JOIN_SEATS && Array.isArray(join.JOIN_SEATS) && join.JOIN_SEATS.length > 0) {
+				peopleCount = join.JOIN_SEATS.length;
+			}
+			
+			switch (join.JOIN_STATUS) {
+				case 1: // 预约成功
+					stat.succCnt += peopleCount;
+					break;
+				case 10: // 用户取消
+					stat.cancelCnt += peopleCount;
+					break;
+				case 99: // 管理员取消
+					stat.adminCancelCnt += peopleCount;
+					break;
+			}
+		}
 
 		let whereDay = {
 			DAY_MEET_ID: meetId,
@@ -240,7 +264,7 @@ class MeetService extends BaseService {
 
 		if (timeSet.status == 0) this.AppError('该时段预约已经关闭，请选择其他');
 
-		// 座位占用检查
+		// 获取已预约记录
 		let where = {
 			JOIN_MEET_ID: meet._id,
 			JOIN_MEET_TIME_MARK: timeMark,
@@ -248,27 +272,45 @@ class MeetService extends BaseService {
 		};
 		let joins = await JoinModel.getAll(where, 'JOIN_SEATS');
 		let bookedSeats = [];
+		let currentPeopleCount = 0; // 当前已预约人数
 		
-		// 收集所有已预约的座位
+		// 收集所有已预约的座位和计算人数
 		for (let join of joins) {
-			if (join.JOIN_SEATS && Array.isArray(join.JOIN_SEATS)) {
+			if (join.JOIN_SEATS && Array.isArray(join.JOIN_SEATS) && join.JOIN_SEATS.length > 0) {
 				bookedSeats = bookedSeats.concat(join.JOIN_SEATS);
+				currentPeopleCount += join.JOIN_SEATS.length; // 按座位数计算人数
+			} else {
+				currentPeopleCount += 1; // 没有座位信息的按1人计算
 			}
 		}
 
-		// 检查是否有座位冲突
-		if (selectedSeats && selectedSeats.length > 0) {
-			for (let seat of selectedSeats) {
-				if (bookedSeats.includes(seat)) {
-					this.AppError(`座位${seat}号已被预约，请选择其他座位`);
+		// 检查座位功能相关限制
+		let seatCount = meet.MEET_SEAT_COUNT || 0;
+		if (seatCount > 0) {
+			// 启用了座位功能
+			
+			// 检查是否有座位冲突
+			if (selectedSeats && selectedSeats.length > 0) {
+				for (let seat of selectedSeats) {
+					if (bookedSeats.includes(seat)) {
+						this.AppError(`座位${seat + 1}号已被预约，请选择其他座位`);
+					}
 				}
 			}
-		}
-		
-		// 检查总座位数限制
-		let seatCount = meet.MEET_SEAT_COUNT || 0;
-		if (seatCount > 0 && bookedSeats.length >= seatCount) {
-			this.AppError('该时段预约人员已满，请选择其他');
+			
+			// 检查总座位数限制
+			let newPeopleCount = selectedSeats ? selectedSeats.length : 1;
+			if (currentPeopleCount + newPeopleCount > seatCount) {
+				this.AppError('该时段座位已满，请选择其他时段');
+			}
+		} else {
+			// 未启用座位功能，按传统人数限制检查
+			if (timeSet.isLimit) {
+				let newPeopleCount = selectedSeats && selectedSeats.length > 0 ? selectedSeats.length : 1;
+				if (currentPeopleCount + newPeopleCount > timeSet.limit) {
+					this.AppError('该时段预约人员已满，请选择其他');
+				}
+			}
 		}
 	}
 

@@ -149,13 +149,25 @@ Page({
 
 	bindCopyTap: function (e) {
 		let idx = pageHelper.dataset(e, 'idx');
-		let forms = this.data.dataList.list[idx].JOIN_FORMS;
+		let item = this.data.dataList.list[idx];
+		let forms = item.JOIN_FORMS;
 
 		let ret = '';
 
-		ret += `项目：${this.data.dataList.list[idx].JOIN_MEET_TITLE}\r`;
+		ret += `项目：${item.JOIN_MEET_TITLE}\r`;
 
-		ret += `时段：${this.data.dataList.list[idx].JOIN_MEET_DAY} ${this.data.dataList.list[idx].JOIN_MEET_TIME_START}～${this.data.dataList.list[idx].JOIN_MEET_TIME_END}\r`;
+		ret += `时段：${item.JOIN_MEET_DAY} ${item.JOIN_MEET_TIME_START}～${item.JOIN_MEET_TIME_END}\r`;
+		
+		// 添加座位信息
+		if (item.seatCount > 0) {
+			ret += `座位数：${item.seatCount}个`;
+			if (item.JOIN_SEATS && item.JOIN_SEATS.length > 0) {
+				let seatNumbers = item.JOIN_SEATS.map(seat => seat + 1).join(', ');
+				ret += ` (座位号: ${seatNumbers})`;
+			}
+			ret += '\r';
+		}
+		
 		for (let k in forms) {
 			ret += forms[k].title + '：' + forms[k].val + '\r';
 		}

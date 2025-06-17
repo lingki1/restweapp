@@ -7,7 +7,9 @@ import {
   DatabaseDeleteResponse,
   ReservationRecord,
   FormField,
-  DatabaseAddResponse
+  DatabaseAddResponse,
+  MeetRecord,
+  formatSeatNumbers
 } from './types.js';
 
 export class WeChatAPI {
@@ -376,7 +378,7 @@ export class WeChatAPI {
 
     // 对于复杂查询，需要单独处理
     if (options.mobile || options.name) {
-      if (options.mobile) {
+    if (options.mobile) {
         query += `.where({
           JOIN_FORMS: _.elemMatch({
             title: "手机",
@@ -891,85 +893,119 @@ export class WeChatAPI {
   }
 
   /**
-   * 创建新的预约记录 - 支持Token失效自动重试
+   * 生成唯一的时间段标识
    */
-  async createReservation(params: {
-    name: string;
-    mobile: string;
-    seatNumber?: string;
-    day: string;
-    timeStart: string;
-    timeEnd: string;
-    timeMark: string;
-    meetId: string;
-    meetTitle: string;
-  }, retryCount: number = 0): Promise<{ success: boolean; joinId?: string }> {
-    console.log(`➕ 创建新的预约记录...`);
-    console.log(`👤 姓名: ${params.name}, 📱 手机: ${params.mobile}`);
-    console.log(`📅 日期: ${params.day}, ⏰ 时间: ${params.timeStart}-${params.timeEnd}`);
-    console.log(`🏢 预约窗口: ${params.meetId}, 📝 项目: ${params.meetTitle}`);
-    console.log(`⏰ 时间段标识: ${params.timeMark}`);
+  private generateTimeMark(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let result = 'T' + new Date().toISOString().slice(0, 10).replace(/-/g, '') + 'AAA';
+    for (let i = 0; i < 10; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  /**
+   * 生成唯一的表单字段标识
+   */
+  private generateFieldMark(): string {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+    let result = '';
+    for (let i = 0; i < 10; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  }
+
+  /**
+   * 创建预约窗口（完善版）
+   */
+  async createMeetWindow(params: {
+    title: string;
+    seatCount: number;
+    order?: number;
+    content?: string;
+    adminId?: string;
+    meetDays: {
+      day: string;
+      times: {
+        start: string;
+        end: string;
+        limit?: number;
+        mark?: string;
+      }[];
+    }[];
+    formFields?: {
+      title: string;
+      type: string;
+      required: boolean;
+      options?: string[];
+    }[];
+  }, retryCount: number = 0): Promise<{ success: boolean; meetId?: string }> {
+    console.log(`➕ 创建新的预约窗口...`);
+    console.log(`📝 标题: ${params.title}, 🪑 座位数: ${params.seatCount}`);
+    console.log(`📅 预约日期数: ${params.meetDays.length}`);
+    console.log(`📋 表单字段数: ${params.formFields?.length || 2} (使用默认姓名、手机)`);
     if (retryCount > 0) {
       console.log(`🔄 重试次数: ${retryCount}`);
     }
     
-    // 1. 验证预约窗口和时间段
-    console.log(`🔍 验证预约窗口和时间段...`);
-    const validation = await this.validateMeetAndTime(params.meetId, params.timeMark, params.day);
-    if (!validation.isValid) {
-      throw new Error(`预约失败: 预约窗口不存在、已关闭或时间段无效。请联系管理员确认预约窗口设置。`);
-    }
-    
-    console.log(`✅ 预约窗口验证通过: ${validation.meetTitle}`);
-    console.log(`✅ 时间段验证通过: ${validation.timeSlot.start}-${validation.timeSlot.end}`);
-    
     const token = await this.getAccessToken();
-    
-    // 2. 根据实际数据结构和验证结果生成正确的预约数据
     const now = Date.now();
-    const reservationData = {
-      JOIN_ID: now.toString(), // 使用时间戳作为JOIN_ID
-      JOIN_USER_ID: `user_${now}`, // 生成用户ID
-      JOIN_MEET_ID: params.meetId, // 使用验证过的预约窗口ID
-      JOIN_MEET_TITLE: validation.meetTitle!, // 使用从数据库获取的实际标题
-      JOIN_MEET_DAY: params.day,
-      JOIN_MEET_TIME_START: validation.timeSlot!.start, // 使用从数据库获取的实际时间
-      JOIN_MEET_TIME_END: validation.timeSlot!.end, // 使用从数据库获取的实际时间
-      JOIN_MEET_TIME_MARK: params.timeMark, // 使用验证过的时间段标识
-      JOIN_START_TIME: new Date(`${params.day} ${validation.timeSlot!.start}:00`).getTime(),
-      JOIN_STATUS: 1, // 预约成功
-      JOIN_ADD_TIME: now,
-      JOIN_EDIT_TIME: now,
-      JOIN_FORMS: [
+    
+    // 处理预约日期和时间段
+    const meetDays = params.meetDays.map(dayConfig => ({
+      day: dayConfig.day,
+      times: dayConfig.times.map(timeConfig => ({
+        mark: timeConfig.mark || this.generateTimeMark(),
+        start: timeConfig.start,
+        end: timeConfig.end,
+        limit: timeConfig.limit || params.seatCount,
+        status: 1 // 默认开放
+      }))
+    }));
+    
+    // 处理表单字段设置
+    const formSet = params.formFields ? 
+      params.formFields.map(field => ({
+        title: field.title,
+        mark: this.generateFieldMark(),
+        type: field.type,
+        required: field.required,
+        options: field.options || []
+      })) :
+      [
         {
-          mark: "VPFCGOHJFV", // 使用实际数据中的mark值
           title: "姓名",
-          type: "line", // 修正：实际数据中type是"line"
-          val: params.name
+          mark: this.generateFieldMark(),
+          type: "line",
+          required: true
         },
         {
-          mark: "XAWSQRZWGK", // 使用实际数据中的mark值
-          title: "手机", // 修正：实际数据中title是"手机"
-          type: "line", // 修正：实际数据中type是"line"
-          val: params.mobile
+          title: "手机",
+          mark: this.generateFieldMark(),
+          type: "mobile",
+          required: true
         }
-      ],
-      JOIN_SEATS: params.seatNumber ? [parseInt(params.seatNumber)] : [],
-      JOIN_CODE: Math.floor(Math.random() * 100000000000000).toString().padStart(15, '0'), // 15位验证码
-      _pid: "A00", // 添加实际数据中存在的字段
-      JOIN_ADD_IP: "",
-      JOIN_EDIT_IP: "",
-      JOIN_EDIT_ADMIN_ID: "",
-      JOIN_EDIT_ADMIN_NAME: "",
-      JOIN_EDIT_ADMIN_TIME: 0,
-      JOIN_EDIT_ADMIN_STATUS: 0,
-      JOIN_IS_ADMIN: 0,
-      JOIN_IS_CHECKIN: 0,
-      JOIN_REASON: ""
+      ];
+    
+    const meetData = {
+      _pid: "A00",
+      MEET_ID: `MEET_${now}`,
+      MEET_ADMIN_ID: params.adminId || `admin_${now}`,
+      MEET_TITLE: params.title,
+      MEET_CONTENT: params.content ? [{ type: 'text', content: params.content }] : [],
+      MEET_DAYS: meetDays,
+      MEET_SEAT_COUNT: params.seatCount,
+      MEET_FORM_SET: formSet,
+      MEET_STATUS: 1, // 默认启用
+      MEET_ORDER: params.order || 9999,
+      MEET_ADD_TIME: now,
+      MEET_EDIT_TIME: now,
+      MEET_ADD_IP: "",
+      MEET_EDIT_IP: ""
     };
 
-    // 修正：使用正确的微信云开发添加语法
-    const query = `db.collection("ax_join").add({data: ${JSON.stringify(reservationData)}})`;
+    const query = `db.collection("ax_meet").add({data: ${JSON.stringify(meetData)}})`;
     
     const requestData = {
       env: this.config.envId,
@@ -988,43 +1024,130 @@ export class WeChatAPI {
 
     try {
       const response = await this.makeRequest(options, JSON.stringify(requestData));
-      console.log(`📥 创建预约响应: ${response}`);
+      console.log(`📥 创建预约窗口响应: ${response}`);
       
       const result = DatabaseAddResponse.parse(JSON.parse(response));
       
       if (result.errcode !== 0) {
-        // 检查是否是Token相关错误
         if (this.isTokenError(result.errcode) && retryCount < 2) {
           console.warn(`⚠️ 检测到Token错误 (错误码: ${result.errcode})，清除缓存并重试...`);
-          // 清除Token缓存，强制刷新
           this.accessToken = undefined;
           this.tokenExpiry = undefined;
           this.tokenRefreshing = undefined;
-          // 递归重试
-          return this.createReservation(params, retryCount + 1);
+          return this.createMeetWindow(params, retryCount + 1);
         }
         
-        console.error(`❌ 创建预约失败 - 错误码: ${result.errcode}, 错误信息: ${result.errmsg}`);
-        throw new Error(`创建预约失败: ${result.errmsg} (错误码: ${result.errcode})`);
+        console.error(`❌ 创建预约窗口失败 - 错误码: ${result.errcode}, 错误信息: ${result.errmsg}`);
+        throw new Error(`创建预约窗口失败: ${result.errmsg} (错误码: ${result.errcode})`);
       }
 
-      // 根据官方文档，返回值包含 id_list 数组
       const success = !!(result.id_list && result.id_list.length > 0);
-      const joinId = success ? result.id_list![0] : undefined;
+      const meetId = success ? result.id_list![0] : undefined;
       
-      console.log(`✅ 预约记录创建${success ? '成功' : '失败'}`);
+      console.log(`✅ 预约窗口创建${success ? '成功' : '失败'}`);
       if (success) {
-        console.log(`🎯 生成的JOIN_ID: ${reservationData.JOIN_ID}`);
-        console.log(`🆔 数据库记录ID: ${joinId || '未返回'}`);
+        console.log(`🆔 窗口ID: ${meetData.MEET_ID}`);
+        console.log(`🆔 数据库记录ID: ${meetId || '未返回'}`);
       }
 
-      return { 
-        success, 
-        joinId: joinId || reservationData.JOIN_ID // 如果API没有返回ID，使用我们生成的JOIN_ID
-      };
+      return { success, meetId: meetId || meetData.MEET_ID };
     } catch (error) {
-      console.error(`❌ 创建预约记录异常:`, error);
-      throw new Error(`创建预约记录失败: ${error}`);
+      console.error(`❌ 创建预约窗口异常:`, error);
+      throw new Error(`创建预约窗口失败: ${error}`);
+    }
+  }
+
+  /**
+   * 查询预约窗口
+   */
+  async queryMeetWindows(params: { 
+    status?: string; 
+    limit?: number 
+  }): Promise<MeetRecord[]> {
+    console.log(`🔍 查询预约窗口...`);
+    console.log(`📊 状态筛选: ${params.status || '全部'}`);
+    console.log(`📄 数量限制: ${params.limit || '默认20'}`);
+    
+    let whereClause = '';
+    if (params.status) {
+      whereClause = `.where({MEET_STATUS: ${parseInt(params.status)}})`;
+    }
+    
+    const limit = params.limit || 20;
+    const query = `db.collection("ax_meet")${whereClause}.orderBy("MEET_ORDER", "asc").limit(${limit}).get()`;
+    
+    try {
+      const results = await this.dbQuery(query);
+      console.log(`✅ 查询到 ${results.length} 个预约窗口`);
+      return results as MeetRecord[];
+    } catch (error) {
+      console.error(`❌ 查询预约窗口失败:`, error);
+      throw new Error(`查询预约窗口失败: ${error}`);
+    }
+  }
+
+  /**
+   * 更新预约窗口
+   */
+  async updateMeetWindow(params: {
+    meetId: string;
+    title?: string;
+    seatCount?: number;
+    content?: string;
+    status?: string;
+  }, retryCount: number = 0): Promise<boolean> {
+    console.log(`🔄 更新预约窗口...`);
+    console.log(`🆔 窗口ID: ${params.meetId}`);
+    if (retryCount > 0) {
+      console.log(`🔄 重试次数: ${retryCount}`);
+    }
+    
+    const updateData: any = {
+      MEET_EDIT_TIME: Date.now()
+    };
+    
+    if (params.title) updateData.MEET_TITLE = params.title;
+    if (params.seatCount) updateData.MEET_SEAT_COUNT = params.seatCount;
+    if (params.content) updateData.MEET_CONTENT = [{ type: 'text', content: params.content }];
+    if (params.status) updateData.MEET_STATUS = parseInt(params.status);
+    
+    const updateFields = Object.keys(updateData).map(key => 
+      `${key}: ${typeof updateData[key] === 'string' ? `"${updateData[key]}"` : updateData[key]}`
+    ).join(', ');
+    
+    const query = `db.collection("ax_meet").where({_id: "${params.meetId}"}).update({data: {${updateFields}}})`;
+    
+    try {
+      const modifiedCount = await this.dbUpdate(query, retryCount);
+      const success = modifiedCount > 0;
+      console.log(`${success ? '✅' : '❌'} 预约窗口更新${success ? '成功' : '失败'}, 影响记录数: ${modifiedCount}`);
+      return success;
+    } catch (error) {
+      console.error(`❌ 更新预约窗口异常:`, error);
+      throw new Error(`更新预约窗口失败: ${error}`);
+    }
+  }
+
+  /**
+   * 删除预约窗口
+   */
+  async deleteMeetWindow(meetId: string, retryCount: number = 0): Promise<boolean> {
+    console.log(`🗑️ 删除预约窗口...`);
+    console.log(`🆔 窗口ID: ${meetId}`);
+    if (retryCount > 0) {
+      console.log(`🔄 重试次数: ${retryCount}`);
+    }
+    
+    const query = `db.collection("ax_meet").where({_id: "${meetId}"}).remove()`;
+    
+    try {
+      const deletedCount = await this.dbDelete(query, retryCount);
+      const success = deletedCount > 0;
+      console.log(`${success ? '✅' : '❌'} 预约窗口删除${success ? '成功' : '失败'}, 删除记录数: ${deletedCount}`);
+      return success;
+    } catch (error) {
+      console.error(`❌ 删除预约窗口异常:`, error);
+      throw new Error(`删除预约窗口失败: ${error}`);
     }
   }
 } 

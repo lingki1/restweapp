@@ -12,10 +12,11 @@
 
 
 			<view class="form-group">
-				<view class="title must">座位数</view>
-				<input placeholder="请输入座位数" type="digit" placeholder-class="phc" model:value="{{formSeats}}" maxlength="4"></input>
+				<view class="title">座位数 <text class="text-grey text-normal">(可选)</text></view>
+				<input placeholder="0表示不启用座位功能，>0表示启用座位选择" type="digit" placeholder-class="phc" model:value="{{formSeats}}" maxlength="4"></input>
 			</view>
 			<view wx:if="{{formSeatsFocus}}" class="hint-desc error">{{formSeatsFocus}}</view>
+			<view class="hint-desc">设置座位数后，将自动替代时间段的人数限制；用户选择座位数即为实际用餐人数</view>
 
 			<view class="form-group">
 				<view class="title must" bindtap="url" data-type="hint" data-url="用户看到的预约列表排序，小的先显示">排序号<text class="icon-question margin-left-xxs text-normal"></text></view>

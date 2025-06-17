@@ -60,14 +60,45 @@ class AdminMeetService extends BaseAdminService {
 
 	/** 管理员按钮核销 */
 	async checkinJoin(joinId, flag) {
-		// 功能已开放
+		const JoinModel = require('../../model/join_model.js');
+		
+		// 更新签到状态
+		let where = { _id: joinId };
+		let data = { 
+			JOIN_IS_CHECKIN: flag,
+			JOIN_EDIT_TIME: require('../../../framework/utils/time_util.js').time()
+		};
+		
+		await JoinModel.edit(where, data);
+		
 		return { success: true, joinId, flag };
 	}
 
-	/** 管理员扫码核销 */
+	/** 管理员扫码核验 */
 	async scanJoin(meetId, code) {
-		// 功能已开放
-		return { success: true, meetId, code };
+		const JoinModel = require('../../model/join_model.js');
+		
+		// 根据核验码查找预约记录
+		let where = {
+			JOIN_MEET_ID: meetId,
+			JOIN_CODE: code,
+			JOIN_STATUS: 1 // 只处理成功的预约
+		};
+		
+		let join = await JoinModel.getOne(where);
+		if (!join) {
+			throw new Error('未找到该核验码对应的有效预约记录');
+		}
+		
+		// 更新签到状态
+		let data = { 
+			JOIN_IS_CHECKIN: 1,
+			JOIN_EDIT_TIME: require('../../../framework/utils/time_util.js').time()
+		};
+		
+		await JoinModel.edit({ _id: join._id }, data);
+		
+		return { success: true, meetId, code, joinId: join._id };
 	}
 
 	/**
@@ -96,10 +127,68 @@ class AdminMeetService extends BaseAdminService {
 
 	/** 取消某个时间段的所有预约记录 */
 	async cancelJoinByTimeMark(admin, meetId, timeMark, reason) {
-		// 功能已开放
-		return { success: true, meetId, timeMark, reason };
+		const JoinModel = require('../../model/join_model.js');
+		const MeetService = require('../meet_service.js');
+		const timeUtil = require('../../../framework/utils/time_util.js');
+		
+		// 查找该时间段的所有有效预约
+		let where = {
+			JOIN_MEET_ID: meetId,
+			JOIN_MEET_TIME_MARK: timeMark,
+			JOIN_STATUS: 1 // 只取消成功的预约
+		};
+		
+		let joins = await JoinModel.getAll(where, '_id');
+		if (joins.length === 0) {
+			return { success: true, meetId, timeMark, reason, cancelCount: 0 };
+		}
+		
+		// 批量更新预约状态为管理员取消
+		let data = {
+			JOIN_STATUS: 99, // 管理员取消
+			JOIN_REASON: reason || '管理员批量取消',
+			JOIN_EDIT_TIME: timeUtil.time(),
+			JOIN_EDIT_ADMIN_ID: admin.ADMIN_ID || admin._id,
+			JOIN_EDIT_ADMIN_NAME: admin.ADMIN_NAME || '管理员',
+			JOIN_EDIT_ADMIN_TIME: timeUtil.time(),
+			JOIN_EDIT_ADMIN_STATUS: 99
+		};
+		
+		// 更新所有预约记录
+		await JoinModel.edit(where, data);
+		
+		// 更新统计数据
+		let meetService = new MeetService();
+		await meetService.statJoinCnt(meetId, timeMark);
+		
+		// 获取更新后的统计数据返回给前端
+		const DayModel = require('../../model/day_model.js');
+		let day = meetService.getDayByTimeMark(timeMark);
+		let dayWhere = {
+			DAY_MEET_ID: meetId,
+			day: day
+		};
+		let dayRecord = await DayModel.getOne(dayWhere, 'times');
+		
+		let stat = null;
+		if (dayRecord && dayRecord.times) {
+			for (let time of dayRecord.times) {
+				if (time.mark === timeMark) {
+					stat = time.stat;
+					break;
+				}
+			}
+		}
+		
+		return { 
+			success: true, 
+			meetId, 
+			timeMark, 
+			reason, 
+			cancelCount: joins.length,
+			stat: stat || { succCnt: 0, cancelCnt: 0, adminCancelCnt: 0 }
+		};
 	}
-
 
 	/**添加 */
 	async insertMeet(adminId, {
@@ -109,6 +198,18 @@ class AdminMeetService extends BaseAdminService {
 		formSet,
 		seats,
 	}) {
+		// 如果设置了座位数且大于0，则自动替代时间段的limit
+		if (seats > 0 && daysSet) {
+			for (let dayData of daysSet) {
+				if (dayData.times) {
+					for (let time of dayData.times) {
+						time.limit = seats;
+						time.isLimit = true; // 启用人数限制
+					}
+				}
+			}
+		}
+		
 		// 数据库操作
 		let data = {
 			MEET_ADMIN_ID: adminId,
@@ -116,7 +217,7 @@ class AdminMeetService extends BaseAdminService {
 			MEET_ORDER: order,
 			MEET_DAYS: daysSet,
 			MEET_FORM_SET: formSet,
-			MEET_SEAT_COUNT: seats,
+			MEET_SEAT_COUNT: seats || 0,
 			MEET_STATUS: 1
 		};
 
@@ -189,12 +290,25 @@ class AdminMeetService extends BaseAdminService {
 		const DayModel = require('../../model/day_model.js');
 		const timeUtil = require('../../../framework/utils/time_util.js');
 		const dataUtil = require('../../../framework/utils/data_util.js');
+		const MeetModel = require('../../model/meet_model.js');
+		
+		// 获取项目信息，检查座位数设置
+		let meet = await MeetModel.getOne({ _id: meetId }, 'MEET_SEAT_COUNT');
+		let seatCount = meet ? meet.MEET_SEAT_COUNT : 0;
 		
 		// 删除该预约的所有现有时间段数据
 		await DayModel.del({ DAY_MEET_ID: meetId });
 		
 		// 插入新的时间段数据
 		for (let dayData of daysSetData) {
+			// 如果设置了座位数且大于0，则自动替代时间段的limit
+			if (seatCount > 0 && dayData.times) {
+				for (let time of dayData.times) {
+					time.limit = seatCount;
+					time.isLimit = true; // 启用人数限制
+				}
+			}
+			
 			let data = {
 				DAY_ID: dataUtil.genRandomString(15),
 				DAY_MEET_ID: meetId,
@@ -222,13 +336,25 @@ class AdminMeetService extends BaseAdminService {
 		formSet,
 		seats
 	}) {
+		// 如果设置了座位数且大于0，则自动替代时间段的limit
+		if (seats > 0 && daysSet) {
+			for (let dayData of daysSet) {
+				if (dayData.times) {
+					for (let time of dayData.times) {
+						time.limit = seats;
+						time.isLimit = true; // 启用人数限制
+					}
+				}
+			}
+		}
+		
 		// 数据库操作
 		let data = {
 			MEET_TITLE: title,
 			MEET_ORDER: order,
 			MEET_DAYS: daysSet,
 			MEET_FORM_SET: formSet,
-			MEET_SEAT_COUNT: seats
+			MEET_SEAT_COUNT: seats || 0
 		};
 
 		let where = { _id: id };
@@ -259,7 +385,7 @@ class AdminMeetService extends BaseAdminService {
 		orderBy = orderBy || {
 			'JOIN_EDIT_TIME': 'desc'
 		};
-		let fields = 'JOIN_IS_CHECKIN,JOIN_CODE,JOIN_ID,JOIN_REASON,JOIN_USER_ID,JOIN_MEET_ID,JOIN_MEET_TITLE,JOIN_MEET_DAY,JOIN_MEET_TIME_START,JOIN_MEET_TIME_END,JOIN_MEET_TIME_MARK,JOIN_FORMS,JOIN_STATUS,JOIN_EDIT_TIME';
+		let fields = 'JOIN_IS_CHECKIN,JOIN_CODE,JOIN_ID,JOIN_REASON,JOIN_USER_ID,JOIN_MEET_ID,JOIN_MEET_TITLE,JOIN_MEET_DAY,JOIN_MEET_TIME_START,JOIN_MEET_TIME_END,JOIN_MEET_TIME_MARK,JOIN_FORMS,JOIN_SEATS,JOIN_STATUS,JOIN_EDIT_TIME';
 
 		let where = {
 			JOIN_MEET_ID: meetId,
@@ -293,7 +419,41 @@ class AdminMeetService extends BaseAdminService {
 			}
 		}
 
-		return await JoinModel.getList(where, fields, orderBy, page, size, isTotal, oldTotal);
+		let result = await JoinModel.getList(where, fields, orderBy, page, size, isTotal, oldTotal);
+		
+		// 增加座位数和人数统计
+		if (result && result.list) {
+			let totalPeople = 0; // 总人数
+			let totalSeats = 0;  // 总座位数
+			
+			for (let join of result.list) {
+				// 统计座位数
+				if (join.JOIN_SEATS && Array.isArray(join.JOIN_SEATS)) {
+					let seatCount = join.JOIN_SEATS.length;
+					join.seatCount = seatCount; // 为每个记录添加座位数字段
+					
+					// 只统计预约成功的记录
+					if (join.JOIN_STATUS === 1) {
+						totalSeats += seatCount;
+						totalPeople += (seatCount > 0 ? seatCount : 1); // 如果有座位按座位数计，否则按1人计
+					}
+				} else {
+					join.seatCount = 0;
+					// 没有座位信息的按1人计算
+					if (join.JOIN_STATUS === 1) {
+						totalPeople += 1;
+					}
+				}
+			}
+			
+			// 在结果中添加统计信息
+			result.statistics = {
+				totalPeople: totalPeople,
+				totalSeats: totalSeats
+			};
+		}
+
+		return result;
 	}
 
 	/**预约项目分页列表 */
@@ -350,7 +510,22 @@ class AdminMeetService extends BaseAdminService {
 
 	/** 删除 */
 	async delJoin(joinId) {
-		// 功能已开放
+		const JoinModel = require('../../model/join_model.js');
+		const MeetService = require('../meet_service.js');
+		
+		// 获取预约记录信息用于更新统计
+		let join = await JoinModel.getOne({ _id: joinId }, 'JOIN_MEET_ID,JOIN_MEET_TIME_MARK');
+		if (!join) {
+			throw new Error('预约记录不存在');
+		}
+		
+		// 删除预约记录
+		await JoinModel.del({ _id: joinId });
+		
+		// 更新统计数据
+		let meetService = new MeetService();
+		await meetService.statJoinCnt(join.JOIN_MEET_ID, join.JOIN_MEET_TIME_MARK);
+		
 		return { success: true, joinId };
 	}
 
@@ -358,7 +533,41 @@ class AdminMeetService extends BaseAdminService {
 	 * 特殊约定 99=>正常取消 
 	 */
 	async statusJoin(admin, joinId, status, reason = '') {
-		// 功能已开放
+		const JoinModel = require('../../model/join_model.js');
+		const MeetService = require('../meet_service.js');
+		const timeUtil = require('../../../framework/utils/time_util.js');
+		
+		// 获取原预约记录
+		let join = await JoinModel.getOne({ _id: joinId }, 'JOIN_MEET_ID,JOIN_MEET_TIME_MARK,JOIN_STATUS');
+		if (!join) {
+			throw new Error('预约记录不存在');
+		}
+		
+		// 更新预约状态
+		let data = { 
+			JOIN_STATUS: status,
+			JOIN_EDIT_TIME: timeUtil.time()
+		};
+		
+		// 如果有取消理由，记录理由
+		if (reason) {
+			data.JOIN_REASON = reason;
+		}
+		
+		// 如果是管理员操作，记录管理员信息
+		if (admin && (status === 99 || status === 10)) {
+			data.JOIN_EDIT_ADMIN_ID = admin.ADMIN_ID || admin._id;
+			data.JOIN_EDIT_ADMIN_NAME = admin.ADMIN_NAME || '管理员';
+			data.JOIN_EDIT_ADMIN_TIME = timeUtil.time();
+			data.JOIN_EDIT_ADMIN_STATUS = status;
+		}
+		
+		await JoinModel.edit({ _id: joinId }, data);
+		
+		// 更新统计数据
+		let meetService = new MeetService();
+		await meetService.statJoinCnt(join.JOIN_MEET_ID, join.JOIN_MEET_TIME_MARK);
+		
 		return { success: true, joinId, status, reason };
 	}
 

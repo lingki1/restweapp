@@ -7,58 +7,58 @@
 			<cmpt-calendar mode="one" hasDays="{{hasDays}}" bind:click="bindClickCmpt" bind:monthChange="bindMonthChangeCmpt" />
 		</view>
 
-		<view class="list padding-project">
+		<view class="list" style="padding: 0; width: 100%;">
 			<view wx:if="{{list===null}}" class="load loading text-l text-grey"></view>
 			<text wx:elif="{{list.length==0}}" class="no-project icon-emoji text-l text-grey"> 本日没有可预约的项目哦~</text>
 			
 			<!-- 显示可预约时段列表 -->
-			<view wx:if="{{list.length > 0}}" class="time-slots-container">
-				<view class="time-slot-header" style="padding: 10px 5px; margin-bottom: 10px; background-color: #f9f9f9; border-radius: 4px; text-align: center;">
-					<text style="font-size: 16px; color: #333; font-weight: bold;">{{day}} 可预约时段</text>
+			<view wx:if="{{list.length > 0}}" class="time-slots-container" style="width: 100%; padding: 0; margin: 0;">
+				<view class="time-slot-header" style="padding: 20px 15px; margin: 0 0 10px 0; background-color: #f9f9f9; text-align: center; width: 100%; box-sizing: border-box;">
+					<text style="font-size: 18px; color: #333; font-weight: bold;">{{day}} 可预约时段</text>
 				</view>
 				
-				<view wx:for="{{list}}" wx:key="_id" wx:for-item="timeSlot" wx:for-index="slotIndex" class="time-slot-item" style="margin-bottom: 20px; border: 1px solid #e0e0e0; border-radius: 8px; padding: 15px;">
-					<view class="time-slot-info" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-						<view class="time-info">
-							<text style="font-size: 18px; font-weight: bold; color: #333;">{{timeSlot.title}}</text>
-							<text style="display: block; font-size: 14px; color: #666; margin-top: 5px;">{{timeSlot.timeDesc}}</text>
+				<view wx:for="{{list}}" wx:key="_id" wx:for-item="timeSlot" wx:for-index="slotIndex" class="time-slot-item" style="margin: 0 0 15px 0; border: none; border-top: 1px solid #f0f0f0; border-bottom: 1px solid #f0f0f0; padding: 20px 15px; width: 100%; box-sizing: border-box; background-color: #fff;">
+					<view class="time-slot-info" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; width: 100%;">
+						<view class="time-info" style="flex: 1;">
+							<text style="font-size: 20px; font-weight: bold; color: #333; display: block;">{{timeSlot.title}}</text>
+							<text style="display: block; font-size: 16px; color: #666; margin-top: 5px;">{{timeSlot.timeDesc}}</text>
 						</view>
-						<view class="seat-count" style="color: #999; font-size: 12px;">
+						<view class="seat-count" style="color: #999; font-size: 16px; background-color: #f8f8f8; padding: 5px 10px; border-radius: 12px;">
 							共{{timeSlot.seatCount}}个座位
 						</view>
 					</view>
 					
 					<!-- 座位选择区域 - 仅登录用户可见 -->
-					<view class="seat-selection" wx:if="{{userInfo && currentTimeSlot == slotIndex}}">
-						<view class="seat-selection-header" style="padding: 10px 5px; margin-bottom: 10px; background-color: #f0f8ff; border-radius: 4px; text-align: center;">
-							<text style="font-size: 14px; color: #555;">请选择座位 (可多选)</text>
-				</view>
-				<view class="seat-grid" style="display: flex; flex-wrap: wrap; justify-content: flex-start; gap: 10px; padding: 10px;">
-					<view 
-						wx:for="{{seats}}" 
-						wx:key="id" 
-						class="seat {{item.status === 'selected' ? 'selected' : (item.status === 'reserved' ? 'reserved' : 'available')}}" 
-								style="width: 40px; height: 40px; border: 1px solid #ccc; display: flex; align-items: center; justify-content: center; margin: 5px; cursor: pointer; background-color: {{item.status === 'selected' ? '#007aff' : (item.status === 'reserved' ? '#ccc' : '#fff')}}; color: {{item.status === 'selected' ? '#fff' : '#333'}};"
-						bindtap="bindSelectSeat"
-						data-index="{{index}}">
-								{{item.number}}
+					<view class="seat-selection" wx:if="{{userInfo && currentTimeSlot == slotIndex}}" style="width: 100%;">
+						<view class="seat-selection-header" style="padding: 15px 10px; margin-bottom: 15px; background-color: #e8f4fd; border-radius: 8px; text-align: center; width: 100%; box-sizing: border-box;">
+							<text style="font-size: 16px; color: #007aff; font-weight: 500;">请选择座位 (可多选)</text>
+						</view>
+						<view class="seat-grid" style="display: flex; flex-wrap: wrap; justify-content: space-around; gap: 8px; padding: 0 10px; width: 100%; box-sizing: border-box;">
+							<view 
+								wx:for="{{seats}}" 
+								wx:key="id" 
+								class="seat {{item.status === 'selected' ? 'selected' : (item.status === 'reserved' ? 'reserved' : 'available')}}" 
+									style="width: 50px; height: 50px; border: 2px solid {{item.status === 'selected' ? '#007aff' : (item.status === 'reserved' ? '#ddd' : '#e0e0e0')}}; display: flex; align-items: center; justify-content: center; margin: 3px; cursor: pointer; background-color: {{item.status === 'selected' ? '#007aff' : (item.status === 'reserved' ? '#f5f5f5' : '#fff')}}; color: {{item.status === 'selected' ? '#fff' : '#333'}}; border-radius: 8px; font-weight: 500;"
+								bindtap="bindSelectSeat"
+								data-index="{{index}}">
+									{{item.number}}
 							</view>
 						</view>
-						<view class="seat-actions" style="text-align: center; margin-top: 15px; display: flex; gap: 10px; justify-content: center;">
-							<button class="btn-cancel" bindtap="bindCancelSelection" style="background-color: #ccc; color: #333; padding: 8px 16px; border-radius: 4px; border: none;">取消</button>
-							<button class="btn-submit" bindtap="bindNextStep" style="background-color: #007aff; color: white; padding: 8px 16px; border-radius: 4px; border: none;">下一步</button>
+						<view class="seat-actions" style="text-align: center; margin-top: 25px; display: flex; gap: 15px; justify-content: center; width: 100%; padding: 0 20px; box-sizing: border-box;">
+							<button class="btn-cancel" bindtap="bindCancelSelection" style="background-color: #f2f2f2; color: #666; padding: 12px 0; border-radius: 8px; border: none; flex: 1; font-size: 16px; font-weight: 500;">取消</button>
+							<button class="btn-submit" bindtap="bindNextStep" style="background-color: #007aff; color: white; padding: 12px 0; border-radius: 8px; border: none; flex: 1; font-size: 16px; font-weight: 500;">下一步</button>
 						</view>
 					</view>
 					
 					<!-- 选择时段按钮 - 仅登录用户可见 -->
-					<view wx:if="{{userInfo && currentTimeSlot != slotIndex}}" class="select-time-slot" style="text-align: center; margin-top: 10px;">
-						<button class="btn-select-slot" bindtap="bindSelectTimeSlot" data-index="{{slotIndex}}" style="background-color: #28a745; color: white; padding: 10px 20px; border-radius: 4px; border: none;">选择此时段</button>
+					<view wx:if="{{userInfo && currentTimeSlot != slotIndex}}" class="select-time-slot" style="text-align: center; margin-top: 15px; width: 100%; padding: 0 20px; box-sizing: border-box;">
+						<button class="btn-select-slot" bindtap="bindSelectTimeSlot" data-index="{{slotIndex}}" style="background-color: #28a745; color: white; padding: 15px 0; border-radius: 8px; border: none; width: 100%; font-size: 16px; font-weight: 500;">选择此时段</button>
 					</view>
 					
 					<!-- 登录按钮 - 仅未登录用户可见 -->
-					<view wx:if="{{!userInfo}}" class="login-required" style="text-align: center; margin-top: 10px;">
-						<button class="btn-login" bindtap="bindWxLogin" style="background-color: #07c160; color: white; padding: 10px 20px; border-radius: 4px; border: none;">🔐 微信一键登录</button>
-						<view style="font-size: 12px; color: #999; margin-top: 5px;">登录后可预约座位</view>
+					<view wx:if="{{!userInfo}}" class="login-required" style="text-align: center; margin-top: 15px; width: 100%; padding: 0 20px; box-sizing: border-box;">
+						<button class="btn-login" bindtap="bindWxLogin" style="background-color: #07c160; color: white; padding: 15px 0; border-radius: 8px; border: none; width: 100%; font-size: 16px; font-weight: 500;">🔐 微信一键登录</button>
+						<view style="font-size: 14px; color: #999; margin-top: 10px;">登录后可预约座位</view>
 					</view>
 				</view>
 			</view>

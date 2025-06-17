@@ -2,17 +2,11 @@
 	<view class="main">
 		<!-- 顶部导航区 -->
 		<view class="header">
-			<view class="logo">如诣</view>
+			<view class="logo">如詣｜RUYI</view>
 			<view class="nav-icons">
-				<view class="icon-item" bindtap="url" data-url="../../search/search">
-					<text class="icon-search"></text>
-				</view>
-				<view class="icon-item" bindtap="url" data-url="../../meet/index/meet_index">
-					<text class="icon-calendar"></text>
-				</view>
-				<view class="icon-item" bindtap="url" data-url="../../my/index/my_index">
-					<text class="icon-user"></text>
-				</view>
+
+
+
 			</view>
 		</view>
 
